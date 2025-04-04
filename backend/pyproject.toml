@@ -2,10 +2,7 @@
 name = "the-shill-game"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "clement.l",email = "maple3312936@outlook.com"}
-]
-readme = "README.md"
+authors = [{name = "clement.l",email = "maple3312936@outlook.com"}]
 requires-python = ">=3.12"
 dependencies = [
     "openai-agents (>=0.0.8,<0.0.9)"
