@@ -1,0 +1,20 @@
+# Virtual environments
+.venv/
+
+# Environment configuration
+.env
+
+# Python cache and bytecode
+__pycache__/
+
+# Test and coverage outputs
+.pytest_cache/
+
+# OS-specific files
+.DS_Store
+
+# Local database files (e.g. ChromaDB)
+data/chromadb/
+
+# Jupyter Notebook
+.ipynb_checkpoints/

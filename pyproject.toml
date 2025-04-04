@@ -1,0 +1,20 @@
+[project]
+name = "the-shill-game"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "clement.l",email = "maple3312936@outlook.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "openai-agents (>=0.0.8,<0.0.9)"
+]
+
+[tool.poetry]
+packages = [{include = "the_shill_game", from = "src"}]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
