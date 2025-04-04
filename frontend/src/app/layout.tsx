@@ -4,8 +4,8 @@ import "./globals.css";
 import "pixel-retroui/dist/index.css";
 
 export const metadata: Metadata = {
-  title: "AI Agent Game",
-  description: "AI Agent Game 🎮",
+  title: "The Shill Game",
+  description: "The Shill Game 🎮",
 };
 
 export default function RootLayout({
