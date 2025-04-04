@@ -1,5 +1,3 @@
-from ast import TypeVar
-from typing import Type, cast
 from pydantic import BaseModel
 from the_shill_game import openai_client
 

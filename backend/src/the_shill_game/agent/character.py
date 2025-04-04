@@ -33,7 +33,7 @@ React naturally — emotionally, strategically, and personally — as if your re
 
 def _compose_personality_section(traits: Traits) -> str:
     """Insert the character's psychological profile and speaking style."""
-    traits_description = traits.describe_traits().strip()
+    # traits_description = traits.describe_traits().strip()
     communication_style = traits.get_communication_style().strip()
     return f"""## Personality Profile
 
