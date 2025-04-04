@@ -19,11 +19,7 @@ class MemecoinAgent:
         """
         Generates a response to the current conversation based on message history.
         """
-        prompt = (
-            "You are given a list of messages of the current conversation. "
-            "Respond as your character. NEVER repeat another character's phrasing or tone."
-            "Make sure the response is as concise as possible."
-        )
+        prompt = "Begin with a line only *your* character would say. Channel their temperament, pride, or flaws — no generic or diplomatic responses. React meaningfully to what *other players* say, NOT the *host*. Focus on their tone, logic, or attitude. Always be concise."
         message_history = "\n".join(messages)
         response = await Runner.run(
             self.agent, f"{prompt}\n\n# Current Conversation\n{message_history}"

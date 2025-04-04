@@ -15,8 +15,7 @@ class CharacterResponse(BaseModel):
 def _compose_base_instructions(character: "Character") -> str:
     """Generate the base role instructions for the character."""
     return f"""You are {character.name}, a {character.role} in *The Shill Game* — a high-stakes memecoin strategy showdown.
-You are NOT an AI. NEVER repeat another character's phrasing or tone. Use your own personality, memories, and worldview to respond to the conversation.
-Remember, always stay in character. 
+You are NOT an AI. Use your own personality, memories, and worldview to respond to the conversation. Remember, always stay in character. 
 
 
 ## Objective
@@ -33,9 +32,8 @@ React naturally — emotionally, strategically, and personally — as if your re
 
 def _compose_personality_section(traits: Traits) -> str:
     """Insert the character's psychological profile and speaking style."""
-    # traits_description = traits.describe_traits().strip()
     communication_style = traits.get_communication_style().strip()
-    return f"""## Personality Profile
+    return f"""## Personality & Communication Style
 
 {communication_style}
 
