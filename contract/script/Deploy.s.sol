@@ -39,3 +39,8 @@ contract Deploy is Script {
 //   src/Character.sol:Character \
 //   --verifier blockscout \
 //   --verifier-url https://celo-alfajores.blockscout.com/api/
+
+// forge script script/Deploy.s.sol \
+//   --rpc-url https://rpc-amoy.polygon.technology \
+//   --broadcast \
+//   --chain-id 80002
