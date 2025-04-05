@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Provider from "./provider";
 import "./globals.css";
 import "pixel-retroui/dist/index.css";
+import { WebSocketProvider } from "@/context/WebSocketContext";
+import { CharacterProvider } from "@/context/CharacterContext";
 
 export const metadata: Metadata = {
   title: "The Shill Game",
@@ -16,7 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`antialiased font-minecraft`}>
-        <Provider>{children}</Provider>
+        <WebSocketProvider>
+          <CharacterProvider>
+            <Provider>{children}</Provider>
+          </CharacterProvider>
+        </WebSocketProvider>
       </body>
     </html>
   );

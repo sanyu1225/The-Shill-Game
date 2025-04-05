@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "pixel-retroui";
 import { useAccount, useDisconnect, useEnsName, useEnsAvatar } from "wagmi";
 import shortAccount from "@/lib/shortAccount";
 import Image from "next/image";
@@ -10,7 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "pixel-retroui";
-
+import Logo from "@/assets/logo.png";
 const Header = () => {
   const { address } = useAccount();
   const { disconnect } = useDisconnect();
@@ -21,10 +20,10 @@ const Header = () => {
   const avatarSrc = ensAvatar;
 
   return (
-    <div className="fixed top-0 left-0 w-full bg-[#2C2C2C] border-b-4 border-[#1a1a1a] px-4 py-2">
+    <div className="z-50 fixed top-0 left-0 w-full bg-[#112a41] border-b-4 border-[#1a1a1a] px-4 py-2">
       <div className="flex justify-between items-center max-w-7xl mx-auto">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-pixel text-white">🎮 🎮 🎮</h1>
+          <Image src={Logo} alt="Logo" width={32} height={32} />The Shill Game
         </div>
         <DropdownMenu bg="#fefcd0" textColor="black" borderColor="black">
           <DropdownMenuTrigger className="w-full">
