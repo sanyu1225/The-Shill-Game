@@ -20,12 +20,20 @@ interface GameState {
   active_players: Array<{
     name: string;
     traits: Record<string, string>;
-    memecoin: string;
+    memecoin: {
+      name: string;
+      symbol: string;
+      backstory: string;
+    };
   }>;
   eliminated_players: Array<{
     name: string;
     traits: Record<string, string>;
-    memecoin: string;
+    memecoin: {
+      name: string;
+      symbol: string;
+      backstory: string;
+    };
   }>;
 }
 
