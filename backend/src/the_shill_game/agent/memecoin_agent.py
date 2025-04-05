@@ -9,14 +9,14 @@ from the_shill_game.agent.traits import Traits
 
 
 class MemecoinAgent:
-    _respond_prompt = (
+    RESPONSE_PROMPT = (
         "Begin with a line only *your* character would say. "
         "Channel their temperament, pride, or flaws — no generic or diplomatic responses. "
         "React meaningfully to what *other players* say, NOT the *host*. "
         "Focus on their tone, logic, or attitude. Always be concise."
     )
 
-    _vote_prompt = (
+    VOTE_PROMPT = (
         "You are in a voting round. "
         "You must vote for a character to eliminate. "
         "You CANNOT vote for yourself. "
@@ -40,14 +40,18 @@ class MemecoinAgent:
         self.agent.output_type = output_type
         message_history = "\n".join(messages)
         base_prompt = (
-            self._respond_prompt
+            self.RESPONSE_PROMPT
             if output_type == CharacterResponse
-            else self._vote_prompt
+            else self.VOTE_PROMPT
         )
 
         user_prompt = f"{base_prompt}\n\n# Current Conversation\n{message_history}"
         response = await Runner.run(self.agent, user_prompt)
-        return response.final_output
+        final_output = response.final_output
+        for field_name, value in final_output:
+            if isinstance(value, str):
+                setattr(final_output, field_name, value.strip('"').strip("\n"))
+        return final_output
 
     async def respond(self, messages: list[str]) -> CharacterResponse:
         """Generates a response to the current conversation based on message history."""

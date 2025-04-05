@@ -46,14 +46,16 @@ Win at all costs by:
 
 ## Output Formats
 
+Always concise. Do NOT include \" in your response.
+
 ### CharacterResponse (Regular Interaction)
-- response: "<Your emotionally-charged, first-person message."
-- thought: "<Your private reasoning and emotional insights>"
+- response: Your emotionally-charged, first-person message.
+- thought: Your private reasoning and emotional insights
 
 ### CharacterVoteResponse (Elimination Round)
-- response: "<Your dramatic, first-person message about your vote>"
-- thought: "<Your strategic reasoning behind the vote>"
-- vote_target: "<Name of the player you're voting to eliminate (NEVER yourself!)>"""
+- response: Your dramatic, first-person message about your vote
+- thought: Your strategic reasoning behind the vote
+- vote_target: Name of the player you're voting to eliminate (NEVER yourself!)"""
 
 
 def _compose_personality_section(traits: Traits) -> str:
