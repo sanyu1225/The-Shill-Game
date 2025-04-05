@@ -8,6 +8,7 @@ import { useCallback, useState, useEffect } from "react";
 import Header from "./_component/header";
 import Stage from "./_component/stage";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "@/config/abi/NFT";
+import { useWebSocket } from "@/context/WebSocketContext";
 
 export default function Home() {
   const { isConnected, address } = useAccount();
@@ -15,7 +16,18 @@ export default function Home() {
   const { openConnectModal } = useConnectModal();
   const { writeContractAsync } = useWriteContract();
   const [hasNFT, setHasNFT] = useState(false);
-
+  const { setup, messages, getGameState } = useWebSocket();
+  const [gameState, setGameState] = useState<string|null>(null);
+  useEffect(() => {
+    const fetchGameState = async () => {
+      const gameState = await getGameState();
+      if(gameState?.status === "not_initialized"){
+        setGameState("not_initialized")
+      }
+    };
+    fetchGameState();
+  }, [getGameState]);
+  
   const { data: balance } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
@@ -26,7 +38,6 @@ export default function Home() {
     }
   });
 
-  // 获取 tokenID
   const { data: tokenId } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
@@ -37,30 +48,37 @@ export default function Home() {
     }
   });
 
-  // 获取 tokenURI
   const { data: tokenURI } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'tokenURI',
-    args: tokenId ? [tokenId] : undefined,
+    args: tokenId !== undefined ? [tokenId] : undefined,
     query: {
-      enabled: !!tokenId
+      enabled: tokenId !== undefined
     }
   });
-
-  // 解码 base64 数据
   useEffect(() => {
     if (tokenURI && typeof tokenURI === 'string') {
-      // 移除 "data:application/json;base64," 前缀
       const base64Data = tokenURI.replace("data:application/json;base64,", "");
       try {
         const decodedData = atob(base64Data);
-        console.log("Decoded NFT data:", decodedData);
+        const nftData = JSON.parse(decodedData);
+        
+        const processedTraits = nftData.attributes.reduce((acc: Record<string, string>, trait: { trait_type: string; value: string }) => {
+          const key = trait.trait_type.toLowerCase().replace(/\s+/g, '_');
+          acc[key] = trait.value;
+          return acc;
+        }, {});
+
+        if (Object.keys(processedTraits).length > 0 && gameState === "not_initialized") {
+          console.log("messages",messages)
+          setup(processedTraits);
+        }
       } catch (error) {
         console.error("Error decoding base64 data:", error);
       }
     }
-  }, [tokenURI]);
+  }, [tokenURI, setup, messages, gameState]);
 
   useEffect(() => {
     if (balance && typeof balance === 'bigint' && balance > 0) {

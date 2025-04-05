@@ -47,12 +47,13 @@ interface WebSocketContextType {
   nextRound: () => Promise<void>;
   getGameState: () => Promise<GameState | null>;
   getWinner: () => Promise<WinnerResponse | null>;
+  setup: (traits: Record<string, string>) => Promise<any>;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
-const WS_URL = 'ws://54.252.233.89:8000/ws';
-const API_URL = 'http://54.252.233.89:8000';
+const WS_URL = 'wss://reputation-criterion-rabbit-paragraph.trycloudflare.com/ws';
+const API_URL = 'https://reputation-criterion-rabbit-paragraph.trycloudflare.com';
 
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -133,6 +134,24 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setup = async (traits: Record<string, string>) => {
+    try {
+      const response = await fetch(`${API_URL}/game/setup`, {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(traits),
+      });
+      const data = await response.json();
+      console.log("🎮 Setup result:", data);
+      return data;
+    } catch (error) {
+      console.error("❌ Error in setup:", error);
+      return null;
+    }
+  };
+
   return (
     <WebSocketContext.Provider value={{
       isConnected,
@@ -141,6 +160,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       nextRound,
       getGameState,
       getWinner,
+      setup,
     }}>
       {children}
     </WebSocketContext.Provider>

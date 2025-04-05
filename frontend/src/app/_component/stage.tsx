@@ -14,17 +14,19 @@ const Stage = () => {
 
   useEffect(() => {
     if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.type === 'system') {
-        if (lastMessage.event === 'round_completed_ended') {
-          setIsRoundCompleted(true);
+      messages.forEach((message) => {
+        console.log("Processing message:", message);
+        if (message.type === "system") {
+          if (message.event === "round_completed_ended") {
+            setIsRoundCompleted(true);
+          }
+          // 当收到 Joined game 消息时，允许开始游戏
+          if (message.content === "Joined game.") {
+            setCanStartGame(true);
+            setGameStarted(false);
+          }
         }
-        // 当收到 Joined game 消息时，允许开始游戏
-        if (lastMessage.content === 'Joined game.') {
-          setCanStartGame(true);
-          setGameStarted(false);
-        }
-      }
+      });
     }
   }, [messages]);
 
@@ -41,25 +43,36 @@ const Stage = () => {
         <div className="max-w-[1200px] mx-auto grid grid-cols-[2fr_1fr] gap-8">
           <div className="space-y-6">
             <GameStage />
-            
+
             <div className="flex justify-center gap-4">
-              <Button 
-                onClick={handleStartGame}
-                className={`!min-w-[120px] !h-[45px] transition-all duration-300
-                  ${canStartGame ? 'animate-pulse' : 'opacity-50 cursor-not-allowed'}
-                `}
-                disabled={!canStartGame || gameStarted}
-              >
-                Start Game
-              </Button>
-              <Button 
+              {gameStarted && (
+                <Button
+                  onClick={handleStartGame}
+                  className={`!min-w-[120px] !h-[45px] transition-all duration-300
+                    ${
+                      canStartGame
+                        ? "animate-pulse"
+                        : "opacity-50 cursor-not-allowed"
+                    }
+                  `}
+                  disabled={!canStartGame || gameStarted}
+                >
+                  Start Game
+                </Button>
+              )}
+
+              <Button
                 onClick={() => {
                   console.log("🔄 Clicking Next Round button");
                   nextRound();
                   setIsRoundCompleted(false);
                 }}
                 className={`!min-w-[120px] !h-[45px] transition-all duration-300
-                  ${isRoundCompleted ? 'animate-pulse' : 'opacity-50 cursor-not-allowed'}
+                  ${
+                    isRoundCompleted
+                      ? "animate-pulse"
+                      : "opacity-50 cursor-not-allowed"
+                  }
                 `}
                 disabled={!isRoundCompleted}
               >
@@ -86,7 +99,7 @@ const Stage = () => {
             box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
           }
         }
-        
+
         .animate-pulse {
           animation: pulse-border 2s infinite;
         }
