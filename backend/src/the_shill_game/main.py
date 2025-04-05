@@ -1,6 +1,8 @@
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+import json
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Dict, Any, Optional
 
 from the_shill_game.game.setup import run_game, setup_game
 from the_shill_game.game.websocket import WebSocketManager
@@ -70,6 +72,48 @@ async def get_game_state():
         raise HTTPException(
             status_code=500, detail=f"Error retrieving game state: {str(e)}"
         )
+
+
+@app.post("/game/setup")
+async def setup_game_api(traits: Dict[str, str] = Body(...)):
+    """Set up a new game with custom character traits"""
+    global game_state, is_initializing
+
+    try:
+        async with initialization_lock:
+            if is_initializing:
+                return {
+                    "status": "error",
+                    "message": "Game is already being initialized. Please wait.",
+                }
+
+            if game_state:
+                return {
+                    "status": "error",
+                    "message": "Game already exists. Cannot initialize a new one.",
+                }
+
+            is_initializing = True
+            try:
+                # Setup the game with client traits
+                game_state = await setup_game(
+                    ws_manager=ws_manager, game_id=GAME_ID, client_traits=traits
+                )
+
+                # Get player names to return
+                players = game_state.get_player_names()
+
+                return {
+                    "status": "success",
+                    "message": "Game initialized successfully with client character",
+                    "players": players,
+                }
+            finally:
+                is_initializing = False
+
+    except Exception as e:
+        logger.error(f"Error setting up game: {e}")
+        raise HTTPException(status_code=500, detail=f"Error setting up game: {str(e)}")
 
 
 @app.post("/game/start")
@@ -181,8 +225,8 @@ async def get_winner():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """Handle a new WebSocket connection and automatically set up the game if needed"""
-    global game_state, is_initializing
+    """Handle a new WebSocket connection for an existing game"""
+    global game_state
 
     logger.info("New WebSocket connection")
     # Accept the WebSocket connection
@@ -192,39 +236,23 @@ async def websocket_endpoint(websocket: WebSocket):
         # Add the connection to the manager for the default game ID
         ws_manager.add_connection(websocket, GAME_ID)
 
-        # Initialize the game if it doesn't exist
+        # Check if game exists
         if game_state:
             logger.info("Client joined existing game.")
             await ws_manager.send_personal_message(websocket, "Joined game.")
+
+            # Inform client of current game state
+            players = game_state.get_player_names()
+            await ws_manager.send_personal_message(
+                websocket, f"Current players: {players}"
+            )
         else:
-            async with initialization_lock:
-                if not game_state and not is_initializing:
-                    is_initializing = True
-
-                    try:
-                        # Inform client that game is being initialized
-                        await ws_manager.send_personal_message(
-                            websocket, "Initializing game. Please wait..."
-                        )
-
-                        # Setup the game
-                        game_state = await setup_game(
-                            ws_manager=ws_manager, game_id=GAME_ID
-                        )
-                        # Inform all clients that the game is ready
-                        players = game_state.get_player_names()
-                        await ws_manager.send_system_message(
-                            GAME_ID, f"Game initialized with players: {players}"
-                        )
-
-                        logger.info("Game initialized successfully")
-                    finally:
-                        is_initializing = False
-
-                elif is_initializing:
-                    await ws_manager.send_personal_message(
-                        websocket, "Game is being initialized. Please wait..."
-                    )
+            # Game doesn't exist, inform client to set up game via API
+            logger.info("Game not initialized. Informing client to use API.")
+            await ws_manager.send_personal_message(
+                websocket,
+                "Game not initialized. Please set up the game using the /game/setup API endpoint first.",
+            )
 
         # Main message loop - just keep the connection alive
         while True:

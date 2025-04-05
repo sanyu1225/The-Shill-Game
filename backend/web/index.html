@@ -281,6 +281,116 @@
       .sender {
         font-weight: bold;
       }
+
+      /* Modal styles */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        overflow-y: auto;
+        padding: 20px 0;
+      }
+
+      .modal-content {
+        background-color: #1e1e1e;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #333;
+        width: 90%;
+        max-width: 700px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        max-height: none; /* Remove max height limitation */
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #333;
+      }
+
+      .modal-title {
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      .close {
+        color: #aaa;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+
+      .close:hover {
+        color: #fff;
+      }
+
+      .traits-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      @media (max-width: 600px) {
+        .traits-form {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .form-group {
+        margin-bottom: 10px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #e0e0e0;
+        font-weight: 500;
+      }
+
+      .form-group select {
+        width: 100%;
+        padding: 10px;
+        background-color: #252525;
+        color: #e0e0e0;
+        border: 1px solid #444;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      .form-group select:focus {
+        outline: none;
+        border-color: #4dabf7;
+      }
+
+      .knowledge-seeking-container {
+        grid-column: 1 / span 2;
+        margin-top: 10px;
+      }
+
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding-top: 20px;
+        border-top: 1px solid #333;
+      }
+
+      .form-actions button {
+        padding: 10px 20px;
+        font-size: 15px;
+      }
     </style>
   </head>
   <body>
@@ -299,10 +409,156 @@
     <div id="log"></div>
 
     <div class="controls">
+      <button onclick="openSetupModal()">Setup Game</button>
       <button onclick="startGame()">Start Game</button>
       <button onclick="getGameState()">Get State</button>
       <button onclick="nextRound()">Next Round</button>
       <button onclick="getWinnerTakeaway()">Get Winner Takeaway</button>
+    </div>
+
+    <!-- Setup Modal -->
+    <div id="setupModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">Setup Game with Custom Character</div>
+          <span class="close" onclick="closeSetupModal()">&times;</span>
+        </div>
+        <div class="traits-form">
+          <!-- Sociability -->
+          <div class="form-group">
+            <label for="sociability">Sociability</label>
+            <select id="sociability">
+              <option value="Introverted">Introverted</option>
+              <option value="Balanced" selected>Balanced</option>
+              <option value="Extroverted">Extroverted</option>
+            </select>
+          </div>
+
+          <!-- Thinking -->
+          <div class="form-group">
+            <label for="thinking">Thinking</label>
+            <select id="thinking">
+              <option value="Emotional">Emotional</option>
+              <option value="Balanced" selected>Balanced</option>
+              <option value="Logical">Logical</option>
+            </select>
+          </div>
+
+          <!-- Cooperation -->
+          <div class="form-group">
+            <label for="cooperation">Cooperation</label>
+            <select id="cooperation">
+              <option value="Competitive">Competitive</option>
+              <option value="Flexible" selected>Flexible</option>
+              <option value="Cooperative">Cooperative</option>
+            </select>
+          </div>
+
+          <!-- Risk Taking -->
+          <div class="form-group">
+            <label for="risk_taking">Risk Taking</label>
+            <select id="risk_taking">
+              <option value="Cautious" selected>Cautious</option>
+              <option value="Balanced">Balanced</option>
+              <option value="Impulsive">Impulsive</option>
+            </select>
+          </div>
+
+          <!-- Exploration -->
+          <div class="form-group">
+            <label for="exploration">Exploration</label>
+            <select id="exploration">
+              <option value="Conservative">Conservative</option>
+              <option value="Open-Minded" selected>Open-Minded</option>
+              <option value="Curious">Curious</option>
+            </select>
+          </div>
+
+          <!-- Trust -->
+          <div class="form-group">
+            <label for="trust">Trust</label>
+            <select id="trust">
+              <option value="Skeptical">Skeptical</option>
+              <option value="Cautiously Trusting" selected>Cautiously Trusting</option>
+              <option value="Trusting">Trusting</option>
+            </select>
+          </div>
+
+          <!-- Morality -->
+          <div class="form-group">
+            <label for="morality">Morality</label>
+            <select id="morality">
+              <option value="Pragmatic">Pragmatic</option>
+              <option value="Fair-Minded" selected>Fair-Minded</option>
+              <option value="Highly Principled">Highly Principled</option>
+            </select>
+          </div>
+
+          <!-- Adaptability -->
+          <div class="form-group">
+            <label for="adaptability">Adaptability</label>
+            <select id="adaptability">
+              <option value="Resistant">Resistant</option>
+              <option value="Moderate" selected>Moderate</option>
+              <option value="Highly Adaptive">Highly Adaptive</option>
+            </select>
+          </div>
+
+          <!-- Initiative -->
+          <div class="form-group">
+            <label for="initiative">Initiative</label>
+            <select id="initiative">
+              <option value="Follower">Follower</option>
+              <option value="Situational Leader" selected>Situational Leader</option>
+              <option value="Natural Leader">Natural Leader</option>
+            </select>
+          </div>
+
+          <!-- Emotional Control -->
+          <div class="form-group">
+            <label for="emotional_control">Emotional Control</label>
+            <select id="emotional_control">
+              <option value="Hot-Tempered">Hot-Tempered</option>
+              <option value="Stable" selected>Stable</option>
+              <option value="Calm & Collected">Calm & Collected</option>
+            </select>
+          </div>
+
+          <!-- Foresight -->
+          <div class="form-group">
+            <label for="foresight">Foresight</label>
+            <select id="foresight">
+              <option value="Short-Term Thinker">Short-Term Thinker</option>
+              <option value="Balanced" selected>Balanced</option>
+              <option value="Visionary">Visionary</option>
+            </select>
+          </div>
+
+          <!-- Action Style -->
+          <div class="form-group">
+            <label for="action_style">Action Style</label>
+            <select id="action_style">
+              <option value="Traditionalist">Traditionalist</option>
+              <option value="Open to Innovation" selected>Open to Innovation</option>
+              <option value="Innovator">Innovator</option>
+            </select>
+          </div>
+
+          <!-- Knowledge Seeking -->
+          <div class="form-group knowledge-seeking-container">
+            <label for="knowledge_seeking">Knowledge Seeking</label>
+            <select id="knowledge_seeking">
+              <option value="Practical Learner">Practical Learner</option>
+              <option value="Curious Learner" selected>Curious Learner</option>
+              <option value="Knowledge-Seeker">Knowledge-Seeker</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button onclick="closeSetupModal()">Cancel</button>
+          <button onclick="setupGame()">Setup Game</button>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -322,6 +578,59 @@
       const maxReconnectAttempts = 5;
       const reconnectDelay = 5000; // 5 seconds
       const apiBaseUrl = `http://${host}:${port}`;
+
+      // Modal Functions
+      function openSetupModal() {
+        document.getElementById("setupModal").style.display = "block";
+      }
+
+      function closeSetupModal() {
+        document.getElementById("setupModal").style.display = "none";
+      }
+
+      // Setup Game with traits
+      async function setupGame() {
+        try {
+          const traits = {
+            sociability: document.getElementById("sociability").value,
+            thinking: document.getElementById("thinking").value,
+            cooperation: document.getElementById("cooperation").value,
+            risk_taking: document.getElementById("risk_taking").value,
+            exploration: document.getElementById("exploration").value,
+            trust: document.getElementById("trust").value,
+            morality: document.getElementById("morality").value,
+            adaptability: document.getElementById("adaptability").value,
+            initiative: document.getElementById("initiative").value,
+            emotional_control: document.getElementById("emotional_control").value,
+            foresight: document.getElementById("foresight").value,
+            action_style: document.getElementById("action_style").value,
+            knowledge_seeking: document.getElementById("knowledge_seeking").value,
+          };
+
+          log(`🔧 Setting up game with traits: ${JSON.stringify(traits, null, 2)}`);
+
+          const response = await fetch(`${apiBaseUrl}/game/setup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(traits),
+          });
+
+          const data = await response.json();
+          log(`📤 Setup game result: ${JSON.stringify(data, null, 2)}`);
+
+          // Reconnect to WebSocket if needed
+          if (!socket || socket.readyState !== WebSocket.OPEN) {
+            connect();
+          }
+        } catch (error) {
+          log(`❌ Error setting up game: ${error.message}`);
+        } finally {
+          // Always close the modal, even if there's an error
+          closeSetupModal();
+        }
+      }
 
       function updateStatus(connected) {
         const indicator = document.getElementById("status-indicator");

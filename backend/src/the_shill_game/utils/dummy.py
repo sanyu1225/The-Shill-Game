@@ -1,6 +1,6 @@
 import asyncio
 import random
-from typing import List
+from typing import List, Dict
 
 from the_shill_game.agent.character import Character
 from the_shill_game.agent.memecoin_agent import MemecoinAgent, create_agent
@@ -112,6 +112,35 @@ async def create_agents(num: int, model: str = "gpt-4o") -> List[MemecoinAgent]:
     )
     # Create agents from characters
     return [create_agent(character, model) for character in characters]
+
+
+async def create_agent_with_traits(
+    name: str, traits_dict: Dict[str, str], model: str = "gpt-4o"
+) -> MemecoinAgent:
+    """Create a single character with specified traits and return an agent
+
+    Args:
+        traits_dict: Dictionary of traits for the character
+        model: LLM model to use for the agent
+
+    Returns:
+        An agent with the specified traits
+    """
+    # Create a traits object from the dictionary
+    traits = Traits(**traits_dict)
+
+    # Get a random name and theme
+    themes = _get_memecoin_themes(1)
+
+    # Create a character with the specified traits
+    character = await Character.create(
+        name=name,
+        traits=traits,
+        memecoin_theme=themes[0],
+    )
+
+    # Create and return an agent from the character
+    return create_agent(character, model)
 
 
 if __name__ == "__main__":
