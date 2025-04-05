@@ -34,7 +34,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
-      if (latestMessage.type === 'agent' && latestMessage.sender) {
+      if (latestMessage.type === 'agent' && typeof latestMessage.sender === 'string') {
         addCharacter(latestMessage.sender);
       }
     }

@@ -48,7 +48,6 @@ const GameStage = () => {
     return () => clearInterval(interval);
   }, [getGameState]);
 
-  // 处理消息，设置正在思考的角色
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
@@ -56,11 +55,11 @@ const GameStage = () => {
       if (
         lastMessage.type === "agent" &&
         lastMessage.sender &&
+        typeof lastMessage.sender === "string" &&
         !lastMessage.sender.includes("Host")
       ) {
         setThinkingPlayerId(lastMessage.sender);
 
-        // 4秒后清除思考状态
         setTimeout(() => {
           setThinkingPlayerId(null);
         }, 4000);

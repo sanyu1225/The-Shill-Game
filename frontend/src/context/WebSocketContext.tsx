@@ -10,7 +10,7 @@ interface Message {
   }>;
   status?: 'waiting' | 'started' | 'ended';
   currentRound?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface GameState {
@@ -58,18 +58,13 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const socket = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const MAX_RECONNECT_ATTEMPTS = 5;
-  const RECONNECT_DELAY = 5000;
-
+  
   useEffect(() => {
-    // 连接 WebSocket
     socket.current = new WebSocket(WS_URL);
 
     socket.current.onopen = () => {
       console.log('WebSocket Connected');
       setIsConnected(true);
-      setReconnectAttempts(0);
     };
 
     socket.current.onclose = () => {
