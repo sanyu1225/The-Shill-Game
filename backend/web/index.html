@@ -98,6 +98,19 @@
         animation: pulse 1.5s infinite;
       }
 
+      .status-indicator.connected + #status-text {
+        color: #03c988;
+      }
+
+      .status-indicator.disconnected + #status-text {
+        color: #f7374f;
+      }
+
+      .status-indicator.connecting + #status-text {
+        color: #f6b17a;
+        animation: pulse 1.5s infinite;
+      }
+
       .game-info {
         font-size: 14px;
       }
