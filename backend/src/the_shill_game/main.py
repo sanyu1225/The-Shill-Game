@@ -124,6 +124,61 @@ async def next_round():
         )
 
 
+@app.get("/game/winner")
+async def get_winner():
+    """Get the winner's takeaway when the game is over"""
+    try:
+        if not game_state:
+            return {
+                "status": "not_initialized",
+                "message": "Game not initialized yet. Connect via WebSocket to initialize.",
+            }
+
+        if game_state.round_phase != "game_over":
+            return {
+                "status": "game_not_over",
+                "message": "Game is not over yet. The winner will be announced when the game concludes.",
+            }
+
+        # Get the winner(s)
+        takeaway = game_state.generate_winner_takeaway()
+        if len(game_state.active_agents) == 1:
+            winner = game_state.active_agents[0]
+            return {
+                "status": "success",
+                "winner": {
+                    "name": winner.character.name,
+                    "memecoin": winner.character.memecoin,
+                    "takeaway": takeaway,
+                },
+            }
+        elif len(game_state.active_agents) == 2:
+            # In case of a tie between two finalists
+            winners = game_state.active_agents
+            return {
+                "status": "success",
+                "winners": [
+                    {
+                        "name": winner.character.name,
+                        "memecoin": winner.character.memecoin,
+                        "takeaway": takeaway,
+                    }
+                    for winner in winners
+                ],
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "Invalid game state: unexpected number of active agents.",
+            }
+
+    except Exception as e:
+        logger.error(f"Error retrieving winner: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Error retrieving winner: {str(e)}"
+        )
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """Handle a new WebSocket connection and automatically set up the game if needed"""

@@ -210,6 +210,7 @@
       <button onclick="startGame()">Start Game</button>
       <button onclick="getGameState()">Get State</button>
       <button onclick="nextRound()">Next Round</button>
+      <button onclick="getWinnerTakeaway()">Get Winner Takeaway</button>
     </div>
 
     <script>
@@ -356,6 +357,32 @@
           log(`📊 Game state: ${JSON.stringify(data, null, 2)}`);
         } catch (error) {
           log(`❌ Error fetching game state: ${error.message}`);
+        }
+      }
+
+      // Get winner's takeaway
+      async function getWinnerTakeaway() {
+        try {
+          const response = await fetch(`${apiBaseUrl}/game/winner`);
+          const data = await response.json();
+
+          if (data.status === "success") {
+            if (data.winner) {
+              log(`🏆 Winner: ${data.winner.name}`);
+              log(`💰 Memecoin: ${data.winner.memecoin.name} (${data.winner.memecoin.symbol})`);
+              log(`📝 Takeaway: ${data.winner.takeaway}`);
+            } else if (data.winners) {
+              log(`🏆 Winners: ${data.winners.map((w) => w.name).join(" and ")}`);
+              data.winners.forEach((winner) => {
+                log(`💰 Memecoin: ${winner.memecoin.name} (${winner.memecoin.symbol})`);
+              });
+              log(`📝 Takeaway: ${data.winners[0].takeaway}`);
+            }
+          } else {
+            log(`ℹ️ ${data.message}`);
+          }
+        } catch (error) {
+          log(`❌ Error fetching winner takeaway: ${error.message}`);
         }
       }
 

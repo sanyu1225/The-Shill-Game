@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional
 from collections import Counter
 import random
-import re
 
 from the_shill_game.agent.memecoin_agent import MemecoinAgent
 from the_shill_game.game.host import (
@@ -14,6 +13,7 @@ from the_shill_game.game.host import (
 )
 from the_shill_game.game.websocket import WebSocketManager
 from the_shill_game.utils.logger import logger
+from the_shill_game.utils.model import invoke_chat_response
 
 
 class GameState:
@@ -112,7 +112,7 @@ class GameState:
         """Run the persuasion and strategy phase"""
         self.round_phase = "persuasion"
 
-        round_intro = f"[Host] Alright! It's time for the persuasion phase. Each player will have a chance to speak."
+        round_intro = "[Host] Alright! It's time for the persuasion phase. Each player will have a chance to speak."
         await self._add_to_messages(round_intro)
 
         for agent in self.speaking_order:
@@ -286,6 +286,28 @@ class GameState:
             return self.active_agents
         else:
             raise ValueError("Game is not over")
+
+    def generate_winner_takeaway(self) -> str:
+        """Generate a takeaway message for the winner"""
+        # if len(self.active_agents) > 2 or self.round_phase != "game_over":
+        #     raise ValueError("Game is not over")
+
+        winners = self.active_agents
+        response = invoke_chat_response(
+            input=(
+                f"The following is a transcript of The Shill Game, a social survival show where players must outwit, outtalk, "
+                f"and outmaneuver each other to become the last memecoin founder standing.\n\n"
+                f"Conversation history:\n{self.messages}\n\n"
+                f"The winner(s): {', '.join(agent.character.name for agent in winners)}"
+            ),
+            instruction=(
+                "You're the host of The Shill Game. "
+                "Summarize how the winner(s) outplayed the others — highlight their most brilliant moves, "
+                "alliances made or broken, emotional or psychological tactics, and what set them apart.\n"
+                "End with a punchy one-liner or mic-drop statement that captures why they won."
+            ),
+        )
+        return response
 
     def _resolve_vote_target(
         self, voting_agent: MemecoinAgent, voted_target: str
