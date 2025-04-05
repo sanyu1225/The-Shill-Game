@@ -167,6 +167,11 @@
         color: #4dabf7;
       }
 
+      .host-message .message {
+        color: #f6b17a;
+        font-weight: bold;
+      }
+
       .system-message .message {
         color: #e0e0e0;
         font-weight: bold;
@@ -249,10 +254,18 @@
             let messageContent = "";
 
             if (data.type === "agent") {
-              messageContent += `<div class="agent-message">
-                <div class="message">
-                  <span class="sender">${data.sender}:</span> ${data.response}
-                </div>`;
+              // Check if the sender is "Host"
+              if (data.sender === "Host") {
+                messageContent += `<div class="host-message">
+                  <div class="message">
+                    <span class="sender">${data.sender}:</span> ${data.response}
+                  </div>`;
+              } else {
+                messageContent += `<div class="agent-message">
+                  <div class="message">
+                    <span class="sender">${data.sender}:</span> ${data.response}
+                  </div>`;
+              }
 
               if (data.thought) {
                 messageContent += `<div class="thought">💭 ${data.thought}</div>`;

@@ -15,7 +15,7 @@ l_intro_openings = [
 
 l_intro_intros = [
     "[Host] {name}, the mic's yours. Tell us about your coin—and is it just another JPEG-fueled fever dream?",
-    "[Host] {name}, your turn. Convince us this isn't just another Discord pump-and-dump in disguise.",
+    "[Host] {name}. Convince us this isn't just another Discord pump-and-dump in disguise.",
     "[Host] {name}, you've got 15 seconds. Make us believe in your bag. Go.",
     "[Host] {name}, step up and pitch your coin like your exit scam depends on it.",
     "[Host] {name}, impress us—or we toss your project into the blockchain abyss. What are you shilling?",
@@ -46,12 +46,29 @@ l_intro_intros = [
     "[Host] Cool. My grandma almost bought it. {name}, your turn to pitch.",
 ]
 
-l_intro_votings = [
-    "[Host] Alright, time to separate the diamond hands from the paper clowns.\nCast your vote. One of these coins is going straight to zero.",
-    "[Host] You heard the shills. Some were spicy, some were just... sad.\nVote for the weakest coin before it rugged your brain.",
-    "[Host] One founder will be ghosted harder than their community after launch.\nChoose who gets de-listed from reality.",
-    "[Host] The market has spoken—or will, once you vote. Who's the biggest joke in this memecoin circus?",
-    "[Host] Someone's project is going straight to the crypto graveyard.\nPick the loser. Bury the dream.",
+l_intro_transition = [
+    "[Host] Alright. You've heard them all.",
+    "[Host] That's the end of the pitches.",
+    "[Host] Time to judge the chaos.",
+    "[Host] Hope you were paying attention.",
+    "[Host] Let's settle this.",
+    "[Host] The stage is clear.",
+    "[Host] Memes have been made. Decisions await.",
+    "[Host] Let the judgment begin.",
+]
+
+
+l_voting_intro = [
+    "[Host] It's time to vote. Choose the founder whose pitch held the least water.",
+    "[Host] Place your vote. Which one's getting delisted by popular demand?",
+    "[Host] Cast your vote. One of these coins is circling the drain.",
+    "[Host] Hit 'em where it hurts. Vote for the weakest shill.",
+    "[Host] Decide who takes the express lane to irrelevance.",
+    "[Host] Choose the one you trust least with a wallet and a dream.",
+    "[Host] Make it count. One founder's about to vanish from the blockchain.",
+    "[Host] Tap into your inner cynic. Pick the pitch that insulted your intelligence.",
+    "[Host] Rug one. Vote now.",
+    "[Host] Who's getting banished? You decide.",
 ]
 
 
@@ -71,25 +88,45 @@ class HostLineManager:
         return self.remaining_lines.pop()
 
 
-opening_manager = HostLineManager(l_intro_openings)
-intro_manager = HostLineManager(l_intro_intros)
-voting_manager = HostLineManager(l_intro_votings)
+intro_intro_manager = HostLineManager(l_intro_intros)
+
+
+def get_background():
+    return background
 
 
 def get_host_intro_message(
-    phase: Literal["opening", "intro", "init_voting"],
+    phase: Literal["opening", "intro", "transition"],
     current_speaker: str = "",
     is_first_intro: bool = False,
 ) -> str:
     if phase == "opening":
-        return background + "\n\n" + opening_manager.next_line()
+        return random.choice(l_intro_openings)
     elif phase == "intro":
         if not current_speaker:
             raise ValueError("current_speaker_name is required for intro phase")
         if is_first_intro:
-            line = intro_manager.next_line(restrict_to_first_n=16)
+            line = intro_intro_manager.next_line(restrict_to_first_n=15)
         else:
-            line = intro_manager.next_line()
+            line = intro_intro_manager.next_line()
         return line.format(name=current_speaker)
-    elif phase == "init_voting":
-        return voting_manager.next_line()
+    elif phase == "transition":
+        return random.choice(l_intro_transition)
+
+
+def get_host_voting_message(
+    phase: Literal["intro", "cue", "announce_result", "tie_breaker"],
+    current_speaker: str = "",
+    most_voted_agents: list[str] = [],
+) -> str:
+    if phase == "intro":
+        return random.choice(l_voting_intro)
+    elif phase == "cue":
+        return f"[Host] {current_speaker}, please cast your vote."
+    elif phase == "announce_result":
+        if len(most_voted_agents) == 1:
+            return f"[Host] {most_voted_agents[0]} has received the most votes and will now enter the defense phase!"
+        else:
+            return f"[Host] {', '.join(most_voted_agents)} are tied for the most votes and will now enter the defense phase!"
+    elif phase == "tie_breaker":
+        return "[Host] It's a tie! Let's do it again."

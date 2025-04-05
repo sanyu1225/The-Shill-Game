@@ -95,7 +95,7 @@ def _get_memecoin_themes(num: int) -> List[str]:
     return themes[:num]
 
 
-async def create_agents(num: int, model: str = "gpt-4o-mini") -> List[MemecoinAgent]:
+async def create_agents(num: int, model: str = "gpt-4o") -> List[MemecoinAgent]:
     """Create characters with random trait sets and return agents"""
     traits = _get_character_traits(num)
     names = _get_character_names(num)

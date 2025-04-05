@@ -1,10 +1,16 @@
 from typing import Dict, List, Optional
+from collections import Counter
 import random
 import re
 
 from the_shill_game.agent.memecoin_agent import MemecoinAgent
-from the_shill_game.game.host import get_host_intro_message
+from the_shill_game.game.host import (
+    get_background,
+    get_host_intro_message,
+    get_host_voting_message,
+)
 from the_shill_game.game.websocket import WebSocketManager
+from the_shill_game.utils.logger import logger
 
 
 class GameState:
@@ -19,7 +25,7 @@ class GameState:
         self.round_phase = None  # Current phase within the round
         self.messages = []  # Full conversation history
         # Maps agent ID to the ID of the agent they voted for
-        self.votes = {}
+        self.votes: Dict[str, MemecoinAgent] = {}
         # Whether a tie-breaker has been attempted this round
         self.tie_breaker_attempted = False
 
@@ -41,8 +47,10 @@ class GameState:
 
     async def start(self):
         """Start the game with the introduction round"""
-        self.round = 1
+        logger.info("Running intro phase")
         self.round_phase = "intro"
+
+        await self._add_to_messages(get_background())
 
         await self._add_to_messages(get_host_intro_message("opening"))
 
@@ -60,7 +68,7 @@ class GameState:
             await self._add_to_messages(agent_message, response.thought)
 
         # Start first voting round
-        await self._add_to_messages(get_host_intro_message("init_voting"))
+        await self._add_to_messages(get_host_intro_message("transition"))
         await self.initial_voting_phase()
 
     async def run_round(self):
@@ -113,21 +121,21 @@ class GameState:
 
     async def initial_voting_phase(self):
         """Run the initial voting phase"""
+        logger.info("Running initial voting phase")
         self.round_phase = "initial_voting"
         self.votes = {}
 
-        await self._add_to_messages(
-            "[Host] It's time to vote. Please vote for the player with the least convincing memecoin."
-        )
+        await self._add_to_messages(get_host_voting_message("intro"))
 
         for agent in self.active_agents:
-            vote_prompt = f"[Host] {agent.character.name}, please cast your vote."
-            await self._add_to_messages(vote_prompt)
+            await self._add_to_messages(
+                get_host_voting_message("cue", agent.character.name)
+            )
 
             response = await agent.vote(self.messages)
-
-            # Extract voted agent from response
+            # Get voted agent from response
             voted_agent = self._resolve_vote_target(agent, response.vote_target)
+            # Store vote result
             self.votes[agent.character.id] = voted_agent
 
             vote_message = (
@@ -136,16 +144,15 @@ class GameState:
             await self._add_to_messages(vote_message, response.thought)
 
         # Count votes and determine who goes to defense
-        vote_results = self._count_votes_detailed()
-        if vote_results["tied"] and len(vote_results["most_voted_agents"]) > 1:
-            # If there's a tie for most votes, randomly select one to defend
-            self.defending_agent = random.choice(vote_results["most_voted_agents"])
-            tie_message = f"[Host] There's a tie between {', '.join([a.character.name for a in vote_results['most_voted_agents']])}. {self.defending_agent.character.name} has been randomly selected to enter the defense phase."
-            await self._add_to_messages(tie_message)
-        else:
-            self.defending_agent = vote_results["most_voted_agents"][0]
-            defense_announcement = f"[Host] {self.defending_agent.character.name} has received the most votes and will now enter the defense phase."
-            await self._add_to_messages(defense_announcement)
+        vote_results = self._count_votes()
+
+        announce_result_message = get_host_voting_message(
+            "announce_result",
+            most_voted_agents=[
+                agent.character.name for agent in vote_results["most_voted_agents"]
+            ],
+        )
+        await self._add_to_messages(announce_result_message)
 
     async def defense_phase(self):
         """Run the defense phase"""
@@ -196,7 +203,7 @@ class GameState:
 
     async def process_round_results(self):
         """Process the results of the current round"""
-        vote_results = self._count_votes_detailed()
+        vote_results = self._count_votes()
 
         # Check if there's a tie
         if vote_results["tied"] and len(vote_results["most_voted_agents"]) > 1:
@@ -297,9 +304,9 @@ class GameState:
             await self._add_to_messages(vote_message, response.thought)
 
         # Count tie-breaker votes
-        vote_results = self._count_votes_detailed()
+        vote_results = self._count_votes()
 
-        if vote_results["tied"] and len(vote_results["most_voted_agents"]) > 1:
+        if len(vote_results["most_voted_agents"]) > 1:
             # Still tied after tie-breaker
             tie_message = "[Host] We still have a tie after the tie-breaker."
             await self._add_to_messages(tie_message)
@@ -389,31 +396,24 @@ class GameState:
             return None
         return random.choice(agent_list)
 
-    def _count_votes_detailed(self) -> Dict:
+    def _count_votes(self) -> Dict:
         """Count votes and return detailed information about voting results"""
-        vote_count = {}
+        vote_count = Counter(
+            voted_agent.character.id for voted_agent in self.votes.values()
+        )
 
-        for voted_agent in self.votes.values():
-            if voted_agent:
-                agent_id = voted_agent.character.id
-                vote_count[agent_id] = vote_count.get(agent_id, 0) + 1
-
-        # Find agent(s) with most votes
-        max_votes = 0
-        most_voted_agents = []
-
-        for agent_id, count in vote_count.items():
-            if count > max_votes:
-                max_votes = count
-                most_voted_agents = [self._get_agent_by_id(agent_id)]
-            elif count == max_votes:
-                most_voted_agents.append(self._get_agent_by_id(agent_id))
+        # Get the agent(s) with the most votes
+        max_votes = max(vote_count.values())
+        most_voted_agents = [
+            self._get_agent_by_id(agent_id)
+            for agent_id, count in vote_count.items()
+            if count == max_votes
+        ]
 
         return {
-            "vote_count": vote_count,
+            "vote_count": dict(vote_count),
             "max_votes": max_votes,
             "most_voted_agents": most_voted_agents,
-            "tied": len(most_voted_agents) > 1,
         }
 
     async def _add_to_messages(self, message: str, thought: str = None):

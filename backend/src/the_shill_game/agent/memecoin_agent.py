@@ -9,11 +9,18 @@ from the_shill_game.agent.traits import Traits
 
 
 class MemecoinAgent:
-    _base_prompt = (
+    _respond_prompt = (
         "Begin with a line only *your* character would say. "
         "Channel their temperament, pride, or flaws — no generic or diplomatic responses. "
         "React meaningfully to what *other players* say, NOT the *host*. "
         "Focus on their tone, logic, or attitude. Always be concise."
+    )
+
+    _vote_prompt = (
+        "You are in a voting round. "
+        "You must vote for a character to eliminate. "
+        "You CANNOT vote for yourself. "
+        "Remember, you need to survive no matter what. "
     )
 
     def __init__(self, character: Character, model: str):
@@ -32,10 +39,14 @@ class MemecoinAgent:
         """
         self.agent.output_type = output_type
         message_history = "\n".join(messages)
-        full_prompt = (
-            f"{self._base_prompt}\n\n# Current Conversation\n{message_history}"
+        base_prompt = (
+            self._respond_prompt
+            if output_type == CharacterResponse
+            else self._vote_prompt
         )
-        response = await Runner.run(self.agent, full_prompt)
+
+        user_prompt = f"{base_prompt}\n\n# Current Conversation\n{message_history}"
+        response = await Runner.run(self.agent, user_prompt)
         return response.final_output
 
     async def respond(self, messages: list[str]) -> CharacterResponse:
