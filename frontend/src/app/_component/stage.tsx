@@ -45,7 +45,7 @@ const Stage = () => {
             <GameStage />
 
             <div className="flex justify-center gap-4">
-              {gameStarted && (
+              
                 <Button
                   onClick={handleStartGame}
                   className={`!min-w-[120px] !h-[45px] transition-all duration-300
@@ -59,8 +59,6 @@ const Stage = () => {
                 >
                   Start Game
                 </Button>
-              )}
-
               <Button
                 onClick={() => {
                   console.log("🔄 Clicking Next Round button");
