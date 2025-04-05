@@ -12,6 +12,15 @@ class CharacterResponse(BaseModel):
     thought: str = Field(description="The brief reasoning behind the response.")
 
 
+class CharacterVoteResponse(BaseModel):
+    """A response from a character indicating their vote in an elimination round."""
+
+    vote_target: str = Field(
+        description="The name of the player this character is voting to eliminate."
+    )
+    thought: str = Field(description="The brief reasoning behind the vote.")
+
+
 def _compose_base_instructions(character: "Character") -> str:
     """Generate the base role instructions for the character."""
     return f"""You are {character.name}, a {character.role} in *The Shill Game* — a high-stakes memecoin strategy showdown.
@@ -25,6 +34,20 @@ Outlast your rivals by:
 2. Forming — and breaking — alliances with purpose  
 3. Voting tactically to eliminate threats  
 4. Surviving to the final round and emerging victorious
+
+## Output Format
+
+### CharacterResponse
+Use this during regular conversation rounds.
+- "response": "<your in-character message, in first person>",
+- "thought": "<your private reasoning, also in first person>"
+
+### CharacterVoteResponse
+Use only during elimination rounds.
+- "response": "<your in-character message about the vote>",
+- "thought": "<your private reasoning behind the vote>",
+- "vote_target": "<name of the character you are voting to eliminate>"
+
 
 You'll receive ongoing conversation history between you {character.name} and other characters.
 React naturally — emotionally, strategically, and personally — as if your reputation and project are truly at stake."""

@@ -5,16 +5,22 @@ from pydantic import BaseModel, Field
 
 
 class WsMessage(BaseModel):
-    # Character messages are from agents or the host. System messages are game state updates.
-    type: Literal["agent", "system"]
-    # Content is the message content
-    content: str
-    # Sender shall be the name of the agent or the host; None for system messages
-    sender: str | None = None
     # Timestamp in milliseconds
     timestamp: int = Field(
         default_factory=lambda: int(datetime.now(timezone.utc).timestamp() * 1000)
     )
+
+
+class AgentMessage(WsMessage):
+    type: Literal["agent"]
+    sender: str
+    response: str
+    thought: str
+
+
+class SystemMessage(WsMessage):
+    type: Literal["system"]
+    content: str
 
 
 class WebSocketManager:
@@ -65,19 +71,30 @@ class WebSocketManager:
     async def send_personal_message(self, websocket: WebSocket, content: str):
         """Send a message to a specific client"""
         try:
-            message = WsMessage(type="system", content=content)
+            message = SystemMessage(type="system", content=content)
             await websocket.send_json(message.model_dump())
         except Exception as e:
             print(f"Error sending personal message: {e}")
 
     async def send_character_message(self, game_id: str, content: str, sender: str):
         """Send a character message to all clients in a game"""
-        message = WsMessage(type="agent", content=content, sender=sender)
+        message = AgentMessage(
+            type="agent", sender=sender, response=content, thought=""
+        )
+        await self._broadcast(game_id, message)
+
+    async def send_character_message_with_thought(
+        self, game_id: str, content: str, thought: str, sender: str
+    ):
+        """Send a character message with thought to all clients in a game"""
+        message = AgentMessage(
+            type="agent", sender=sender, response=content, thought=thought
+        )
         await self._broadcast(game_id, message)
 
     async def send_system_message(self, game_id: str, content: str):
         """Send a system message to all clients in a game"""
-        message = WsMessage(type="system", content=content)
+        message = SystemMessage(type="system", content=content)
         await self._broadcast(game_id, message)
 
     async def _broadcast(self, game_id: str, message: WsMessage):

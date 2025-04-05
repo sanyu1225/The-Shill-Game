@@ -1,10 +1,21 @@
-from typing import List
+from typing import Type
 from agents import Agent, Runner
-from the_shill_game.agent.character import Character, CharacterResponse
+from the_shill_game.agent.character import (
+    Character,
+    CharacterResponse,
+    CharacterVoteResponse,
+)
 from the_shill_game.agent.traits import Traits
 
 
 class MemecoinAgent:
+    _base_prompt = (
+        "Begin with a line only *your* character would say. "
+        "Channel their temperament, pride, or flaws — no generic or diplomatic responses. "
+        "React meaningfully to what *other players* say, NOT the *host*. "
+        "Focus on their tone, logic, or attitude. Always be concise."
+    )
+
     def __init__(self, character: Character, model: str):
         self.character = character
         self.agent = Agent(
@@ -15,16 +26,25 @@ class MemecoinAgent:
             output_type=CharacterResponse,
         )
 
-    async def respond(self, messages: List[str]) -> CharacterResponse:
+    async def _run_response(self, messages: list[str], output_type: Type) -> any:
         """
-        Generates a response to the current conversation based on message history.
+        Internal helper to run a character response/vote with the shared logic.
         """
-        prompt = "Begin with a line only *your* character would say. Channel their temperament, pride, or flaws — no generic or diplomatic responses. React meaningfully to what *other players* say, NOT the *host*. Focus on their tone, logic, or attitude. Always be concise."
+        self.agent.output_type = output_type
         message_history = "\n".join(messages)
-        response = await Runner.run(
-            self.agent, f"{prompt}\n\n# Current Conversation\n{message_history}"
+        full_prompt = (
+            f"{self._base_prompt}\n\n# Current Conversation\n{message_history}"
         )
+        response = await Runner.run(self.agent, full_prompt)
         return response.final_output
+
+    async def respond(self, messages: list[str]) -> CharacterResponse:
+        """Generates a response to the current conversation based on message history."""
+        return await self._run_response(messages, CharacterResponse)
+
+    async def vote(self, messages: list[str]) -> CharacterVoteResponse:
+        """Generates a vote to the current conversation based on message history."""
+        return await self._run_response(messages, CharacterVoteResponse)
 
 
 def create_agent(character: Character, model: str = "gpt-4o-mini") -> MemecoinAgent:

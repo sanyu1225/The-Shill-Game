@@ -3,13 +3,20 @@ import random
 import re
 
 from the_shill_game.agent.memecoin_agent import MemecoinAgent
-from the_shill_game.game.host import get_host_message
+from the_shill_game.game.host import get_host_intro_message
+from the_shill_game.game.websocket import WebSocketManager
 
 
 class GameState:
-    def __init__(self, agents: List[MemecoinAgent]):
+    def __init__(
+        self,
+        agents: List[MemecoinAgent],
+        ws_manager: WebSocketManager,
+        game_id: str = "default",
+    ):
         # Game state
         self.round = 0
+        self.round_phase = None  # Current phase within the round
         self.messages = []  # Full conversation history
         # Maps agent ID to the ID of the agent they voted for
         self.votes = {}
@@ -21,16 +28,23 @@ class GameState:
         self.active_agents = agents.copy()
         self.eliminated_agents = []
 
-        self.round_phase = None  # Current phase within the round
         self.speaking_order = []  # Order of agents in the current round
         self.defending_agent = None  # Agent that is currently defending
         self.tied_agents = []  # Agents tied for most votes in final voting
 
+        self.ws_manager = ws_manager
+        self.game_id = game_id
+
+    def get_player_names(self) -> List[str]:
+        """Get the names of the players in the game"""
+        return [agent.character.name for agent in self.active_agents]
+
     async def start(self):
         """Start the game with the introduction round"""
         self.round = 1
+        self.round_phase = "intro"
 
-        self._add_to_messages(get_host_message("opening"))
+        await self._add_to_messages(get_host_intro_message("opening"))
 
         # Determine random speaking order for introductions
         self.speaking_order = self.active_agents.copy()
@@ -38,16 +52,16 @@ class GameState:
 
         # Introduction round
         for i, agent in enumerate(self.speaking_order):
-            self._add_to_messages(
-                get_host_message("intro", agent.character.name, i == 0)
+            await self._add_to_messages(
+                get_host_intro_message("intro", agent.character.name, i == 0)
             )
             response = await agent.respond(self.messages)
             agent_message = f"[{agent.character.name}] {response.response}"
-            self._add_to_messages(agent_message)
+            await self._add_to_messages(agent_message, response.thought)
 
         # Start first voting round
-        self._add_to_messages(get_host_message("init_voting"))
-        # await self.initial_voting_phase()
+        await self._add_to_messages(get_host_intro_message("init_voting"))
+        await self.initial_voting_phase()
 
     async def run_round(self):
         """Run a full game round"""
@@ -86,68 +100,40 @@ class GameState:
         """Run the persuasion and strategy phase"""
         self.round_phase = "persuasion"
 
-        # Report on alliances if any strong ones exist
-        strong_alliances = self.alliance_tracker.get_strongest_alliances(threshold=0.6)
-        if strong_alliances and self.round > 1:
-            alliance_text = (
-                "[Host] I've noticed some interesting dynamics forming in the group. "
-            )
-            if len(strong_alliances) == 1:
-                alliance_pair = strong_alliances[0]
-                agent1_id, agent2_id, _ = alliance_pair
-                agent1_name = self._get_agent_name_by_id(agent1_id)
-                agent2_name = self._get_agent_name_by_id(agent2_id)
-                alliance_text += (
-                    f"It seems {agent1_name} and {agent2_name} may be working together."
-                )
-            else:
-                alliance_text += (
-                    "Several alliances appear to be forming between players."
-                )
-            self.messages.append(alliance_text)
-
         round_intro = f"[Host] Round {self.round} begins! It's time for the persuasion phase. Each player will have a chance to speak."
-        self.messages.append(round_intro)
+        await self._add_to_messages(round_intro)
 
         for agent in self.speaking_order:
             prompt = f"[Host] {agent.character.name}, it's your turn to speak."
-            self.messages.append(prompt)
+            await self._add_to_messages(prompt)
 
             response = await agent.respond(self.messages)
             agent_message = f"[{agent.character.name}] {response.response}"
-            self.messages.append(agent_message)
-
-            # Detect alliances from agent's speech
-            self.alliance_tracker.update_alliances(
-                agent, response.response, self.messages
-            )
+            await self._add_to_messages(agent_message, response.thought)
 
     async def initial_voting_phase(self):
         """Run the initial voting phase"""
         self.round_phase = "initial_voting"
         self.votes = {}
 
-        self.messages.append(
+        await self._add_to_messages(
             "[Host] It's time to vote. Please vote for the player with the least convincing memecoin."
         )
 
         for agent in self.active_agents:
             vote_prompt = f"[Host] {agent.character.name}, please cast your vote."
-            self.messages.append(vote_prompt)
+            await self._add_to_messages(vote_prompt)
 
-            response = await agent.respond(self.messages)
+            response = await agent.vote(self.messages)
 
             # Extract voted agent from response
-            voted_agent = self._extract_vote(agent, response.response)
+            voted_agent = self._resolve_vote_target(agent, response.vote_target)
             self.votes[agent.character.id] = voted_agent
 
             vote_message = (
                 f"[{agent.character.name}] I vote for {voted_agent.character.name}."
             )
-            self.messages.append(vote_message)
-
-        # Update alliances based on voting patterns
-        self.alliance_tracker.detect_alliance_from_votes(self.votes)
+            await self._add_to_messages(vote_message, response.thought)
 
         # Count votes and determine who goes to defense
         vote_results = self._count_votes_detailed()
@@ -155,11 +141,11 @@ class GameState:
             # If there's a tie for most votes, randomly select one to defend
             self.defending_agent = random.choice(vote_results["most_voted_agents"])
             tie_message = f"[Host] There's a tie between {', '.join([a.character.name for a in vote_results['most_voted_agents']])}. {self.defending_agent.character.name} has been randomly selected to enter the defense phase."
-            self.messages.append(tie_message)
+            await self._add_to_messages(tie_message)
         else:
             self.defending_agent = vote_results["most_voted_agents"][0]
             defense_announcement = f"[Host] {self.defending_agent.character.name} has received the most votes and will now enter the defense phase."
-            self.messages.append(defense_announcement)
+            await self._add_to_messages(defense_announcement)
 
     async def defense_phase(self):
         """Run the defense phase"""
@@ -176,23 +162,18 @@ class GameState:
                 voters.append(voter_name)
 
         defense_prompt = f"[Host] {self.defending_agent.character.name}, you received votes from {', '.join(voters)}. You now have a chance to defend your memecoin."
-        self.messages.append(defense_prompt)
+        await self._add_to_messages(defense_prompt)
 
         response = await self.defending_agent.respond(self.messages)
         defense_message = f"[{self.defending_agent.character.name}] {response.response}"
-        self.messages.append(defense_message)
-
-        # Update alliances based on the defense speech
-        self.alliance_tracker.update_alliances(
-            self.defending_agent, response.response, self.messages
-        )
+        await self._add_to_messages(defense_message, response.thought)
 
     async def final_voting_phase(self):
         """Run the final voting phase"""
         self.round_phase = "final_voting"
         self.votes = {}
 
-        self.messages.append(
+        await self._add_to_messages(
             "[Host] After hearing the defense, it's time for the final vote. Please vote for the player to eliminate."
         )
 
@@ -201,20 +182,17 @@ class GameState:
                 continue  # Defending agent doesn't vote in this implementation
 
             vote_prompt = f"[Host] {agent.character.name}, please cast your final vote."
-            self.messages.append(vote_prompt)
+            await self._add_to_messages(vote_prompt)
 
-            response = await agent.respond(self.messages)
+            response = await agent.vote(self.messages)
 
-            voted_agent = self._extract_vote(agent, response.response)
+            voted_agent = self._resolve_vote_target(agent, response.vote_target)
             self.votes[agent.character.id] = voted_agent
 
             vote_message = (
                 f"[{agent.character.name}] I vote for {voted_agent.character.name}."
             )
-            self.messages.append(vote_message)
-
-        # Update alliances based on voting patterns
-        self.alliance_tracker.detect_alliance_from_votes(self.votes)
+            await self._add_to_messages(vote_message, response.thought)
 
     async def process_round_results(self):
         """Process the results of the current round"""
@@ -224,7 +202,7 @@ class GameState:
         if vote_results["tied"] and len(vote_results["most_voted_agents"]) > 1:
             self.tied_agents = vote_results["most_voted_agents"]
             tie_message = f"[Host] We have a tie between {', '.join([a.character.name for a in self.tied_agents])}."
-            self.messages.append(tie_message)
+            await self._add_to_messages(tie_message)
             return False
 
         # If there's a clear elimination
@@ -233,17 +211,17 @@ class GameState:
         self.eliminated_agents.append(eliminated_agent)
 
         elimination_message = f"[Host] {eliminated_agent.character.name} has been eliminated from the game!"
-        self.messages.append(elimination_message)
+        await self._add_to_messages(elimination_message)
 
         # Let the eliminated agent say farewell
         farewell_prompt = (
             f"[Host] {eliminated_agent.character.name}, do you have any final words?"
         )
-        self.messages.append(farewell_prompt)
+        await self._add_to_messages(farewell_prompt)
 
         response = await eliminated_agent.respond(self.messages)
         farewell_message = f"[{eliminated_agent.character.name}] {response.response}"
-        self.messages.append(farewell_message)
+        await self._add_to_messages(farewell_message, response.thought)
 
         return True
 
@@ -256,17 +234,17 @@ class GameState:
             self.eliminated_agents.append(eliminated_agent)
 
             tie_break_message = f"[Host] Since we've had a persistent tie, {eliminated_agent.character.name} has been randomly eliminated."
-            self.messages.append(tie_break_message)
+            await self._add_to_messages(tie_break_message)
 
             # Let the eliminated agent say farewell
             farewell_prompt = f"[Host] {eliminated_agent.character.name}, do you have any final words?"
-            self.messages.append(farewell_prompt)
+            await self._add_to_messages(farewell_prompt)
 
             response = await eliminated_agent.respond(self.messages)
             farewell_message = (
                 f"[{eliminated_agent.character.name}] {response.response}"
             )
-            self.messages.append(farewell_message)
+            await self._add_to_messages(farewell_message, response.thought)
 
             return True
 
@@ -276,16 +254,16 @@ class GameState:
         self.votes = {}
 
         tie_breaker_msg = f"[Host] We have a tie between {', '.join([a.character.name for a in self.tied_agents])}. Let's have a tie-breaker."
-        self.messages.append(tie_breaker_msg)
+        await self._add_to_messages(tie_breaker_msg)
 
         # Let tied agents speak again
         for agent in self.tied_agents:
             speak_prompt = f"[Host] {agent.character.name}, please make your final case to stay in the game."
-            self.messages.append(speak_prompt)
+            await self._add_to_messages(speak_prompt)
 
             response = await agent.respond(self.messages)
             speak_message = f"[{agent.character.name}] {response.response}"
-            self.messages.append(speak_message)
+            await self._add_to_messages(speak_message, response.thought)
 
         # Non-tied agents vote between the tied agents
         voting_agents = [a for a in self.active_agents if a not in self.tied_agents]
@@ -297,15 +275,15 @@ class GameState:
             self.eliminated_agents.append(eliminated_agent)
 
             random_elim_msg = f"[Host] Since all remaining players are tied, {eliminated_agent.character.name} has been randomly eliminated."
-            self.messages.append(random_elim_msg)
+            await self._add_to_messages(random_elim_msg)
             return True
 
         tie_vote_msg = f"[Host] Non-tied players, please vote to eliminate one of the tied players: {', '.join([a.character.name for a in self.tied_agents])}."
-        self.messages.append(tie_vote_msg)
+        await self._add_to_messages(tie_vote_msg)
 
         for agent in voting_agents:
             vote_prompt = f"[Host] {agent.character.name}, please vote to eliminate one of the tied players."
-            self.messages.append(vote_prompt)
+            await self._add_to_messages(vote_prompt)
 
             response = await agent.respond(self.messages)
 
@@ -316,15 +294,15 @@ class GameState:
             self.votes[agent.character.id] = voted_agent
 
             vote_message = f"[{agent.character.name}] I vote to eliminate {voted_agent.character.name}."
-            self.messages.append(vote_message)
+            await self._add_to_messages(vote_message, response.thought)
 
         # Count tie-breaker votes
         vote_results = self._count_votes_detailed()
 
         if vote_results["tied"] and len(vote_results["most_voted_agents"]) > 1:
             # Still tied after tie-breaker
-            tie_message = f"[Host] We still have a tie after the tie-breaker."
-            self.messages.append(tie_message)
+            tie_message = "[Host] We still have a tie after the tie-breaker."
+            await self._add_to_messages(tie_message)
             return False
 
         # Eliminate the agent with most votes in tie-breaker
@@ -333,62 +311,55 @@ class GameState:
         self.eliminated_agents.append(eliminated_agent)
 
         elimination_message = f"[Host] After the tie-breaker, {eliminated_agent.character.name} has been eliminated from the game!"
-        self.messages.append(elimination_message)
+        await self._add_to_messages(elimination_message)
 
         # Let the eliminated agent say farewell
         farewell_prompt = (
             f"[Host] {eliminated_agent.character.name}, do you have any final words?"
         )
-        self.messages.append(farewell_prompt)
+        await self._add_to_messages(farewell_prompt)
 
         response = await eliminated_agent.respond(self.messages)
         farewell_message = f"[{eliminated_agent.character.name}] {response.response}"
-        self.messages.append(farewell_message)
+        await self._add_to_messages(farewell_message, response.thought)
 
         return True
 
-    def end_game(self):
+    async def end_game(self):
         """End the game and announce the winner"""
+        self.round_phase = "game_over"
+
         if len(self.active_agents) == 1:
+            # We have a winner
             winner = self.active_agents[0]
             winning_message = f"[Host] Congratulations {winner.character.name}! You are the winner of The Shill Game!"
-            self.messages.append(winning_message)
+            await self._add_to_messages(winning_message)
             return winner
         elif len(self.active_agents) == 2:
             # Final two agents
             finalists_message = f"[Host] We have our final two contestants: {self.active_agents[0].character.name} and {self.active_agents[1].character.name}!"
-            self.messages.append(finalists_message)
+            await self._add_to_messages(finalists_message)
             return self.active_agents
         return None
 
-    def _extract_vote(
-        self, voting_agent: MemecoinAgent, response: str
+    def _resolve_vote_target(
+        self, voting_agent: MemecoinAgent, voted_target: str
     ) -> MemecoinAgent:
-        """Extract the voted agent from a response"""
-        # Try to identify who they're voting for from the response
+        """Resolve the voted agent from the input string."""
+        normalized_target = voted_target.strip().lower()
+        voting_agent_name = voting_agent.character.name.strip().lower()
+
         for agent in self.active_agents:
-            if (
-                agent != voting_agent
-                and agent.character.name.lower() in response.lower()
-            ):
-                # Look for patterns like "I vote for X" or "voting for X"
-                vote_patterns = [
-                    rf"vote (?:for|to eliminate) .*?{agent.character.name}",
-                    rf"voting (?:for|to eliminate) .*?{agent.character.name}",
-                    rf"my vote is .*?{agent.character.name}",
-                    rf"I choose .*?{agent.character.name}",
-                    rf"eliminating .*?{agent.character.name}",
-                ]
+            active_agent_name = agent.character.name.strip().lower()
+            if active_agent_name == voting_agent_name:
+                continue  # Can't vote for yourself
+            if active_agent_name == normalized_target:
+                return agent
 
-                for pattern in vote_patterns:
-                    if re.search(pattern, response, re.IGNORECASE):
-                        return agent
-
-        # If we couldn't extract the vote, randomly select an agent that's not the voting agent
-        valid_targets = [a for a in self.active_agents if a != voting_agent]
-        if not valid_targets:
-            return None
-        return random.choice(valid_targets)
+        raise ValueError(
+            f"Unable to resolve vote target '{voted_target}'. "
+            f"Active targets: {[agent.character.name for agent in self.active_agents]}"
+        )
 
     def _extract_vote_from_list(
         self,
@@ -445,8 +416,30 @@ class GameState:
             "tied": len(most_voted_agents) > 1,
         }
 
-    def _add_to_messages(self, message: str):
+    async def _add_to_messages(self, message: str, thought: str = None):
+        """Add a message to the conversation history and send via WebSocket if available"""
+        # Store message in local history
         self.messages.append(message.strip().replace("\n", " "))
+
+        # If WebSocket manager is available, send the message
+        if self.ws_manager and self.game_id:
+            # Extract sender and content from message format
+            if message.startswith("[") and "]" in message:
+                parts = message.split("]", 1)
+                sender = parts[0][1:].strip()  # Remove brackets
+                content = parts[1].strip()
+
+                if thought:
+                    await self.ws_manager.send_character_message_with_thought(
+                        self.game_id, content, thought, sender
+                    )
+                else:
+                    await self.ws_manager.send_character_message(
+                        self.game_id, content, sender
+                    )
+            else:
+                # Default to system message if format doesn't match
+                await self.ws_manager.send_system_message(self.game_id, message)
 
     def _get_agent_name_by_id(self, agent_id: str) -> str:
         """Helper method to get an agent's name by their ID"""
