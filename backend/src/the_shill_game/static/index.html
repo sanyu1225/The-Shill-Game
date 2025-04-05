@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebSocket Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .connection-panel {
+        border: 1px solid #ccc;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .message-panel {
+        border: 1px solid #ccc;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .messages {
+        height: 300px;
+        overflow-y: auto;
+        border: 1px solid #eee;
+        padding: 10px;
+        margin-bottom: 10px;
+        background: #f9f9f9;
+      }
+      .message {
+        margin-bottom: 8px;
+        padding: 8px;
+        border-radius: 4px;
+      }
+      .system-message {
+        background-color: #e3f2fd;
+      }
+      .character-message {
+        background-color: #f5f5f5;
+      }
+      .message-sender {
+        font-weight: bold;
+        margin-right: 5px;
+      }
+      .message-time {
+        color: #666;
+        font-size: 0.8em;
+      }
+      input,
+      button {
+        padding: 8px;
+        margin-right: 5px;
+      }
+      button {
+        cursor: pointer;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+      }
+      button:disabled {
+        background-color: #cccccc;
+      }
+      .status {
+        margin-top: 10px;
+        padding: 5px;
+        border-radius: 4px;
+      }
+      .connected {
+        background-color: #dff0d8;
+        color: #3c763d;
+      }
+      .disconnected {
+        background-color: #f2dede;
+        color: #a94442;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="connection-panel">
+        <h2>Connection</h2>
+        <div>
+          <input type="text" id="gameId" placeholder="Game ID" value="test-game" />
+          <button id="connectBtn">Connect</button>
+          <button id="disconnectBtn" disabled>Disconnect</button>
+        </div>
+        <div id="connectionStatus" class="status disconnected">Disconnected</div>
+      </div>
+
+      <div class="message-panel">
+        <h2>Messages</h2>
+        <div class="messages" id="messages"></div>
+        <div>
+          <input type="text" id="sender" placeholder="Your name" />
+          <input type="text" id="messageInput" placeholder="Type your message" />
+          <button id="sendBtn" disabled>Send</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let socket = null;
+      const gameIdInput = document.getElementById("gameId");
+      const connectBtn = document.getElementById("connectBtn");
+      const disconnectBtn = document.getElementById("disconnectBtn");
+      const sendBtn = document.getElementById("sendBtn");
+      const messageInput = document.getElementById("messageInput");
+      const senderInput = document.getElementById("sender");
+      const messagesDiv = document.getElementById("messages");
+      const connectionStatus = document.getElementById("connectionStatus");
+
+      function formatTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString();
+      }
+
+      function addMessage(message) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${message.type}-message`;
+
+        let content = "";
+        if (message.type === "character") {
+          content = `<span class="message-sender">${message.sender}:</span> ${message.content}`;
+        } else {
+          content = message.content;
+        }
+
+        messageDiv.innerHTML = `
+                ${content}
+                <span class="message-time">${formatTimestamp(message.timestamp)}</span>
+            `;
+
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+
+      connectBtn.addEventListener("click", () => {
+        const gameId = gameIdInput.value;
+        socket = new WebSocket(`ws://localhost:8000/ws/${gameId}`);
+
+        socket.onopen = () => {
+          connectionStatus.textContent = "Connected";
+          connectionStatus.className = "status connected";
+          connectBtn.disabled = true;
+          disconnectBtn.disabled = false;
+          sendBtn.disabled = false;
+        };
+
+        socket.onclose = () => {
+          connectionStatus.textContent = "Disconnected";
+          connectionStatus.className = "status disconnected";
+          connectBtn.disabled = false;
+          disconnectBtn.disabled = true;
+          sendBtn.disabled = true;
+        };
+
+        socket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type === "history") {
+            messagesDiv.innerHTML = "";
+            data.messages.forEach(addMessage);
+          } else {
+            addMessage(data);
+          }
+        };
+      });
+
+      disconnectBtn.addEventListener("click", () => {
+        if (socket) {
+          socket.close();
+        }
+      });
+
+      sendBtn.addEventListener("click", () => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          const message = {
+            type: "character",
+            content: messageInput.value,
+            sender: senderInput.value,
+          };
+          socket.send(JSON.stringify(message));
+          messageInput.value = "";
+        }
+      });
+
+      messageInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter" && !sendBtn.disabled) {
+          sendBtn.click();
+        }
+      });
+    </script>
+  </body>
+</html>
