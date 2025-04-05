@@ -47,7 +47,7 @@ interface WebSocketContextType {
   nextRound: () => Promise<void>;
   getGameState: () => Promise<GameState | null>;
   getWinner: () => Promise<WinnerResponse | null>;
-  setup: (traits: Record<string, string>) => Promise<any>;
+  setup: (traits: Record<string, string>) => Promise<unknown>;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
