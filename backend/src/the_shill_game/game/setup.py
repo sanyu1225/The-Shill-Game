@@ -44,14 +44,3 @@ async def run_game(game_state: GameState):
     logger.info("Running game...")
     # Start with introductions
     await game_state.start()
-
-    # Run rounds until we have a winner
-    # while len(game_state.active_agents) > 2:
-    #     # Run a round
-    #     await game_state.run_round()
-    #     # Add a short delay between rounds to give clients time to process
-    #     await asyncio.sleep(2)
-
-    # # Game has concluded
-    # winner = await game_state.end_game()
-    # return winner

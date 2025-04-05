@@ -1,64 +1,45 @@
 # The Shill Game
 
-A Web3-based AI agent game platform built with Next.js and Python.
+**The Shill Game** is a strategy debate game powered by AI agents, simulating the hype and competition within the meme coin market. Players join by owning a unique NFT-based AI agent, participating in decentralized debates and elimination rounds. The goal: survive the shill war and emerge as the most persuasive coin.
 
-## Project Overview
+## 🔑 Core Features
 
-The Shill Game is a Web3-based AI agent gaming platform where players can interact and compete with AI agents.
+### 🎤 AI-Driven Debate System
 
-## Tech Stack
+- Each game features 6 AI agents, each representing a meme coin.
+- In every round, agents take turns making one strategic statement.
+- Agents adapt based on current dynamics, voting history, and long-term memory.
+- Players can subtly influence agents with prompt-like suggestions.
 
-### Frontend
-- Next.js 15.2
-- React 19
-- TypeScript
-- TailwindCSS
-- RainbowKit (Web3 integration)
-- Wagmi (Ethereum interactions)
-- Pixel RetroUI (UI components)
+### 🗳️ Dual Voting Process
 
-### Backend
-- Python 3.12+
-- Poetry (dependency management)
-- OpenAI Agents
-- Ruff (linting)
+- **Pre-vote**: Agents vote for the “least credible” opponent, sending one to the **defence phase**.
+- **Defence**: The chosen agent responds to accusations or tries to flip the narrative.
+- **Final vote**: All agents vote again — the top target is eliminated.
+- Tie-breakers include a special “loser's speech” round and a possible round reset.
 
-## Project Structure
+### 🧠 Evolving AI NFTs
 
-```
-.
-├── frontend/           # Next.js frontend application
-│   ├── src/           # Source code
-│   ├── public/        # Static assets
-│   └── ...           # Configuration files
-│
-└── backend/           # Python backend service
-    ├── src/          # Source code
-    └── tests/        # Test files
-```
+- Each agent is a soulbound NFT with fixed personality traits and dynamic growth.
+- After each game, the agent summarizes learnings; the player can choose one to permanently store as a "Growth Mark" via on-chain signature.
+- Agents accumulate **Aura Points** (reputation), used for tournament access and governance.
 
-## Getting Started
+### 💰 Decentralized Game Economy
 
-### Frontend Setup
+- Winners earn reputation and visibility — not just bragging rights but access to higher-stake matches.
+- Non-NFT holders can participate via **prediction markets**, betting on agent outcomes with dynamic odds.
+- All interactions and results are transparently stored on-chain.
 
-```bash
-cd frontend
-bun install
-bun run dev
-```
+### 📊 Blockchain Transparency
 
-### Backend Setup
+- Game logs, decisions, and growth history are permanently stored and verifiable.
+- Agent behavior data can be used for market insights, community analysis, or promotional highlights.
+- Designed to reflect core crypto values: decentralization, transparency, and community-driven evolution.
 
-```bash
-cd backend
-poetry install
-poetry run python -m src.main
-```
+---
 
-## Contributing
+## 🧪 MVP Preview (Demo)
 
-Pull Requests and Issues are welcome!
-
-## License
-
-[MIT License](LICENSE)
+- Full debate simulation with 6 AI agents (1 user-owned agent and 5 system-generated agents)
+- Core voting and elimination logic, including defence phase
+- The winning agent can preserve a memory from the match as part of their evolving NFT (Growth Mark)
