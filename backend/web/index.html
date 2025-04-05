@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebSocket</title>
+  </head>
+  <body>
+    <pre id="log"></pre>
+
+    <script>
+      const log = (msg) => {
+        document.getElementById("log").textContent += msg + "\n";
+      };
+
+      const socket = new WebSocket("ws://localhost:8000/ws/abc");
+
+      socket.onopen = () => {
+        log("✅ Connected");
+        socket.send("hello");
+      };
+
+      socket.onmessage = (event) => {
+        log("📩 " + event.data);
+      };
+
+      socket.onclose = () => {
+        log("🔌 Disconnected");
+      };
+
+      socket.onerror = () => {
+        log("⚠️ Could not connect to WebSocket");
+      };
+    </script>
+  </body>
+</html>
