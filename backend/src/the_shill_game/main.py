@@ -106,6 +106,12 @@ async def next_round():
                 "message": "Game not initialized yet. Connect via WebSocket to initialize.",
             }
 
+        if game_state.round_phase == "game_over":
+            return {
+                "status": "error",
+                "message": "Game is over. Cannot trigger next round.",
+            }
+
         # Trigger the next round
         asyncio.create_task(game_state.run_round())
 
