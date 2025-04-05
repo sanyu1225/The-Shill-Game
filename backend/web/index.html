@@ -204,11 +204,13 @@
         logElement.scrollTop = logElement.scrollHeight;
       };
 
+      const host = "localhost";
+      const port = 8000;
       let socket = null;
       let reconnectAttempts = 0;
       const maxReconnectAttempts = 5;
-      const reconnectDelay = 3000; // 3 seconds
-      const apiBaseUrl = "http://localhost:8000";
+      const reconnectDelay = 5000; // 5 seconds
+      const apiBaseUrl = `http://${host}:${port}`;
 
       function updateStatus(connected) {
         const indicator = document.getElementById("status-indicator");
@@ -233,7 +235,7 @@
         document.getElementById("status-indicator").className = "status-indicator connecting";
         document.getElementById("status-text").textContent = "Connecting...";
 
-        socket = new WebSocket(`ws://localhost:8000/ws`);
+        socket = new WebSocket(`ws://${host}:${port}/ws`);
 
         socket.onopen = () => {
           console.log("✅ Connected");
