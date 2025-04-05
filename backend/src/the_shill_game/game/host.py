@@ -76,7 +76,7 @@ intro_manager = HostLineManager(l_intro_intros)
 voting_manager = HostLineManager(l_intro_votings)
 
 
-def get_host_message(
+def get_host_intro_message(
     phase: Literal["opening", "intro", "init_voting"],
     current_speaker: str = "",
     is_first_intro: bool = False,
