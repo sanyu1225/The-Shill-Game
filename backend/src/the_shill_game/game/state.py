@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 from collections import Counter
 import random
 
@@ -50,6 +50,7 @@ class GameState:
         """Start the game with the introduction round"""
         logger.info("Running intro phase")
         self.round_phase = "intro"
+        await self._send_phase_event("intro", "started")
 
         await self._add_to_messages(get_background())
 
@@ -68,6 +69,7 @@ class GameState:
             agent_message = f"[{agent.character.name}] {response.response}"
             await self._add_to_messages(agent_message, response.thought)
 
+        await self._send_phase_event("intro", "ended")
         # Start first voting round
         await self._add_to_messages(get_host_intro_message("transition"))
         await self.initial_voting_phase()
@@ -77,10 +79,12 @@ class GameState:
         if not elimination_result:
             # There was a tie, run tie-breaker
             await self.run_tie_breaker()
+        await self._send_phase_event("round_completed", "ended")
 
     async def run_round(self):
         """Run a full game round"""
         self.round += 1
+        await self._send_phase_event("round_completed", "started")
 
         # Reset round state
         self.votes = {}
@@ -107,10 +111,13 @@ class GameState:
         if len(self.active_agents) <= 2:
             # Game is over, we have a winner
             return await self.end_game()
+        else:
+            await self._send_phase_event("round_completed", "ended")
 
     async def persuasion_phase(self):
         """Run the persuasion and strategy phase"""
         self.round_phase = "persuasion"
+        await self._send_phase_event("persuasion", "started")
 
         round_intro = "[Host] Alright! It's time for the persuasion phase. Each player will have a chance to speak."
         await self._add_to_messages(round_intro)
@@ -123,10 +130,13 @@ class GameState:
             agent_message = f"[{agent.character.name}] {response.response}"
             await self._add_to_messages(agent_message, response.thought)
 
+        await self._send_phase_event("persuasion", "ended")
+
     async def initial_voting_phase(self):
         """Run the initial voting phase"""
         logger.info("Running initial voting phase")
         self.round_phase = "initial_voting"
+        await self._send_phase_event("initial_voting", "started")
         self.votes = {}
 
         await self._add_to_messages(get_host_voting_message("intro"))
@@ -157,11 +167,13 @@ class GameState:
             ],
         )
         await self._add_to_messages(announce_result_message)
+        await self._send_phase_event("initial_voting", "ended")
 
     async def defense_phase(self):
         """Run the defense phase"""
         logger.info("Running defense phase")
         self.round_phase = "defense"
+        await self._send_phase_event("defense", "started")
 
         for agent in self.most_voted_agents:
             defense_prompt = get_host_defense_message(agent.character.name)
@@ -170,10 +182,13 @@ class GameState:
             defense_message = f"[{agent.character.name}] {response.response}"
             await self._add_to_messages(defense_message, response.thought)
 
+        await self._send_phase_event("defense", "ended")
+
     async def final_voting_phase(self):
         """Run the final voting phase"""
         logger.info("Running final voting phase")
         self.round_phase = "final_voting"
+        await self._send_phase_event("final_voting", "started")
         self.votes = {}
 
         await self._add_to_messages(get_host_voting_message("final_vote"))
@@ -194,9 +209,12 @@ class GameState:
             )
             await self._add_to_messages(vote_message, response.thought)
 
+        await self._send_phase_event("final_voting", "ended")
+
     async def process_round_results(self) -> bool:
         """Process the results of the current round"""
         logger.info("Processing round results")
+        await self._send_phase_event("elimination", "started")
         vote_results = self._count_votes()
 
         most_voted_agents = vote_results["most_voted_agents"]
@@ -208,6 +226,7 @@ class GameState:
                 most_voted_agents=[a.character.name for a in most_voted_agents],
             )
             await self._add_to_messages(tie_message)
+            await self._send_phase_event("elimination", "ended")
             return False
 
         # If there's a clear elimination
@@ -234,10 +253,12 @@ class GameState:
         response = await eliminated_agent.respond(self.messages)
         farewell_message = f"[{eliminated_agent.character.name}] {response.response}"
         await self._add_to_messages(farewell_message, response.thought)
+        await self._send_phase_event("elimination", "ended")
         return True
 
     async def run_tie_breaker(self):
         """Run a tie-breaker when there's a tie in voting"""
+        await self._send_phase_event("tie_breaker", "started")
         # TODO: For demo purposes, we let the host decide who to eliminate
         response = eliminate_agent(self.tied_agents)
         eliminated_agent_name = response.vote_target.strip().lower()
@@ -267,22 +288,26 @@ class GameState:
         response = await eliminated_agent.respond(self.messages)
         farewell_message = f"[{eliminated_agent.character.name}] {response.response}"
         await self._add_to_messages(farewell_message, response.thought)
+        await self._send_phase_event("tie_breaker", "ended")
 
     async def end_game(self):
         """End the game and announce the winner"""
         logger.info("Running end game")
         self.round_phase = "game_over"
+        await self._send_phase_event("game_over", "started")
 
         if len(self.active_agents) == 1:
             # We have a winner
             winner = self.active_agents[0]
             winning_message = f"[Host] Congratulations {winner.character.name}! You are the winner of The Shill Game!"
             await self._add_to_messages(winning_message)
+            await self._send_phase_event("game_over", "ended")
             return winner
         elif len(self.active_agents) == 2:
             # Final two agents
             finalists_message = f"[Host] We have our final two contestants: {self.active_agents[0].character.name} and {self.active_agents[1].character.name}!"
             await self._add_to_messages(finalists_message)
+            await self._send_phase_event("game_over", "ended")
             return self.active_agents
         else:
             raise ValueError("Game is not over")
@@ -373,6 +398,25 @@ class GameState:
             else:
                 # Default to system message if format doesn't match
                 await self.ws_manager.send_system_message(self.game_id, message)
+
+    async def _send_phase_event(
+        self,
+        phase: Literal[
+            "intro",
+            "persuasion",
+            "initial_voting",
+            "defense",
+            "final_voting",
+            "elimination",
+            "tie_breaker",
+            "game_over",
+            "round_completed",
+        ],
+        state: Literal["started", "ended"],
+    ):
+        """Send an event indicating a phase's state (started/ended)"""
+        if self.ws_manager and self.game_id:
+            await self.ws_manager.send_event(self.game_id, f"{phase}_{state}")
 
     def _get_agent_name_by_id(self, agent_id: str) -> str:
         """Helper method to get an agent's name by their ID"""

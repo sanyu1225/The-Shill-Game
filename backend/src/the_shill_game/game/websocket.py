@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List, Dict, Literal
+from typing import List, Dict, Literal, Optional
 from fastapi import WebSocket
 from pydantic import BaseModel, Field
 
@@ -21,6 +21,7 @@ class AgentMessage(WsMessage):
 class SystemMessage(WsMessage):
     type: Literal["system"]
     content: str
+    event: Optional[str] = None
 
 
 class WebSocketManager:
@@ -95,6 +96,11 @@ class WebSocketManager:
     async def send_system_message(self, game_id: str, content: str):
         """Send a system message to all clients in a game"""
         message = SystemMessage(type="system", content=content)
+        await self._broadcast(game_id, message)
+
+    async def send_event(self, game_id: str, event: str):
+        """Send an event to all clients in a game"""
+        message = SystemMessage(type="system", content="", event=event)
         await self._broadcast(game_id, message)
 
     async def _broadcast(self, game_id: str, message: WsMessage):

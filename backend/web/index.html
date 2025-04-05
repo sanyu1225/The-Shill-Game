@@ -193,6 +193,94 @@
       .sender {
         font-weight: bold;
       }
+
+      .event-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        background-color: #2d3250;
+        color: #ffffff;
+        font-size: 0.85em;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 1px solid #424769;
+      }
+
+      /* Phase-specific badge colors */
+      .phase-intro {
+        background-color: #4dabf7;
+        border-color: #339af0;
+      }
+      .phase-persuasion {
+        background-color: #f6b17a;
+        border-color: #e49554;
+      }
+      .phase-initial_voting {
+        background-color: #9775fa;
+        border-color: #845ef7;
+      }
+      .phase-defense {
+        background-color: #f08c00;
+        border-color: #e67700;
+      }
+      .phase-final_voting {
+        background-color: #9775fa;
+        border-color: #845ef7;
+      }
+      .phase-elimination {
+        background-color: #f03e3e;
+        border-color: #c92a2a;
+      }
+      .phase-tie_breaker {
+        background-color: #f03e3e;
+        border-color: #c92a2a;
+      }
+      .phase-game_over {
+        background-color: #03c988;
+        border-color: #02a96e;
+      }
+      .phase-round_completed {
+        background-color: #20c997;
+        border-color: #12b886;
+      }
+
+      /* State-specific modifiers */
+      .state-started {
+        font-style: normal;
+      }
+      .state-ended {
+        opacity: 0.8;
+        font-style: italic;
+      }
+
+      .current-phase {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px;
+        border-left: 1px solid #333;
+      }
+
+      .current-phase-label {
+        font-size: 14px;
+        color: #adadad;
+      }
+
+      .event-message {
+        background-color: rgba(45, 50, 80, 0.2);
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin: 8px 0;
+      }
+
+      .event-message .message {
+        font-weight: bold;
+      }
+
+      .sender {
+        font-weight: bold;
+      }
     </style>
   </head>
   <body>
@@ -201,6 +289,10 @@
       <div class="status">
         <div id="status-indicator" class="status-indicator disconnected"></div>
         <span id="status-text">Disconnected</span>
+      </div>
+      <div class="current-phase">
+        <span class="current-phase-label">Phase:</span>
+        <span id="current-phase" class="event-badge">-</span>
       </div>
     </div>
 
@@ -293,6 +385,28 @@
                   <span class="sender">System:</span> ${data.content}
                 </div>
               </div>`;
+
+              // Check if there's an event property (phase events)
+              if (data.event) {
+                // Parse event to extract phase and state
+                const eventParts = data.event.split("_");
+                const phase = eventParts[0];
+                const state = eventParts[1]; // "started" or "ended"
+
+                // Update the current phase indicator
+                document.getElementById("current-phase").textContent = data.event;
+                document.getElementById("current-phase").className = `event-badge phase-${phase} state-${state}`;
+
+                // Display event without system message
+                messageContent = `<div class="event-message">
+                  <div class="message">
+                    <span class="sender">Event:</span> <span class="event-badge phase-${phase} state-${state}">${data.event}</span>
+                  </div>
+                </div>`;
+
+                log(messageContent);
+                return; // Skip further processing so we don't show "System:" for events
+              }
             }
 
             log(messageContent);
