@@ -18,15 +18,15 @@ export default function Home() {
   const [hasNFT, setHasNFT] = useState(false);
   const { setup, messages, getGameState } = useWebSocket();
   const [gameState, setGameState] = useState<string|null>(null);
-  useEffect(() => {
-    const fetchGameState = async () => {
-      const gameState = await getGameState();
-      if(gameState?.status === "not_initialized"){
-        setGameState("not_initialized")
-      }
-    };
-    fetchGameState();
-  }, [getGameState]);
+  // useEffect(() => {
+  //   const fetchGameState = async () => {
+  //     const gameState = await getGameState();
+  //     if(gameState?.status === "not_initialized"){
+  //       setGameState("not_initialized")
+  //     }
+  //   };
+  //   fetchGameState();
+  // }, []);
   
   const { data: balance } = useReadContract({
     address: CONTRACT_ADDRESS,
@@ -70,9 +70,12 @@ export default function Home() {
           return acc;
         }, {});
 
-        if (Object.keys(processedTraits).length > 0 && gameState === "not_initialized") {
-          console.log("messages",messages)
-          setup(processedTraits);
+        if (Object.keys(processedTraits).length > 0) {
+          console.log("messages",messages[0])
+          const gameState = messages[0].content
+          if(gameState === "not_initialized"){
+            setup(processedTraits);
+          }
         }
       } catch (error) {
         console.error("Error decoding base64 data:", error);

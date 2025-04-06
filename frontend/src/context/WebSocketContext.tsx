@@ -51,6 +51,7 @@ interface WinnerResponse {
 interface WebSocketContextType {
   isConnected: boolean;
   messages: Message[];
+  gameState: GameState | null;
   startGame: () => Promise<void>;
   nextRound: () => Promise<void>;
   getGameState: () => Promise<GameState | null>;
@@ -59,15 +60,37 @@ interface WebSocketContextType {
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
-
-const WS_URL = 'wss://reputation-criterion-rabbit-paragraph.trycloudflare.com/ws';
-const API_URL = 'https://reputation-criterion-rabbit-paragraph.trycloudflare.com';
+const WS_URL = 'wss://strings-disable-staffing-fi.trycloudflare.com/ws';
+const API_URL = 'https://strings-disable-staffing-fi.trycloudflare.com';
 
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const socket = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   
+  // 轮询游戏状态
+  useEffect(() => {
+    const fetchGameState = async () => {
+      const state = await getGameState();
+      if (state) {
+        // if (state.round_phase === "game_over") {
+        //   const winner = await getWinner();
+        //   console.log("winner", winner);
+        // }
+        setGameState(state);
+      }
+    };
+
+    // 立即获取一次
+    fetchGameState();
+
+    // 每 5 秒获取一次
+    const interval = setInterval(fetchGameState, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     socket.current = new WebSocket(WS_URL);
 
@@ -164,6 +187,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     <WebSocketContext.Provider value={{
       isConnected,
       messages,
+      gameState,
       startGame,
       nextRound,
       getGameState,

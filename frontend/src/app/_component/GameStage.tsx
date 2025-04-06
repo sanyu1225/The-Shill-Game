@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useWebSocket } from "@/context/WebSocketContext";
-import { Popup } from 'pixel-retroui';
+import { Popup, Card } from 'pixel-retroui';
 
 interface GameState {
   status: string;
@@ -29,38 +29,52 @@ interface GameState {
   }>;
 }
 
+interface WinnerResponse {
+  status: string;
+  winners?: Array<{
+    name: string;
+    memecoin: string;
+    takeaway: string;
+  }>;
+  winner?: {
+    name: string;
+    memecoin: string;
+    takeaway: string;
+  };
+}
+
+interface WinnerInfo {
+  name: string;
+  memecoin: string;
+  takeaway: string;
+}
+
 type Player = GameState['active_players'][0];
 
 const GameStage = () => {
-  const [gameState, setGameState] = useState<GameState | null>(null);
   const [thinkingPlayerId, setThinkingPlayerId] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const { messages, getGameState, getWinner } = useWebSocket();
+  const { messages, gameState, getWinner } = useWebSocket();
+  const [showWinner, setShowWinner] = useState(false);
+  const [winners, setWinners] = useState<WinnerInfo[]>([]);
+  // const isMe = 
+  const getWinnerHandler = async () => {
+    const winner = await getWinner() as WinnerResponse | null;
+    console.log("winner", winner);
+    
+    if (!winner) return;
 
-  // 定时获取游戏状态
-  useEffect(() => {
-    const fetchGameState = async () => {
-      const state = await getGameState();
-      console.log("state", state);
-      if (state) {
-        if (state.round_phase === "game_over") {
-          const winner = await getWinner();
-          console.log("winner", winner);
-        }
-        setGameState(state);
-      }
-    };
-
-    // 立即获取一次
-    fetchGameState();
-
-    // 每 2 秒获取一次
-    const interval = setInterval(fetchGameState, 5000);
-
-    return () => clearInterval(interval);
-  }, [getGameState]);
-
+    // Handle both response formats
+    if ('winners' in winner && winner.winners) {
+      // Handle array of winners
+      setWinners(winner.winners);
+    } else if ('winner' in winner && winner.winner) {
+      // Handle single winner
+      setWinners([winner.winner]);
+    }
+    setShowWinner(true);
+  }
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
@@ -77,6 +91,11 @@ const GameStage = () => {
           setThinkingPlayerId(null);
         }, 4000);
       }
+      // game_over_ended
+      if(lastMessage.type === "system" && lastMessage.event === "game_over_ended"){
+        // setShowWinner(true);
+        getWinnerHandler();
+      }
     }
   }, [messages]);
 
@@ -88,8 +107,25 @@ const GameStage = () => {
         style={{ backgroundImage: "url('/bg.png')" }}
       />
 
+      {/* Winner Card */}
+      {showWinner && (
+        <div className="absolute top-12 left-0 right-0 flex items-center justify-center">
+          <Card className="w-[60%] py-4 text-center">
+            <h2 className="text-2xl font-pixel mb-2">
+              {winners.some(w => w.name === "Vitalik") ? "🎉 Congratulations! You Won! 🎉" : "🎮 Game Over 🎮"}
+            </h2>
+            {winners.map((winner, index) => (
+              <div key={index} className="mb-2">
+                <p className="text-xl font-pixel">Winner: {winner.name}</p>
+                <p className="text-sm font-pixel">Takeaway: {winner.takeaway}</p>
+              </div>
+            ))}
+          </Card>
+        </div>
+      )}
+
       {/* 角色群组容器 */}
-      <div className="absolute bottom-20 right-20 flex gap-2 top-[40%] left-[28%]">
+      <div className="absolute bottom-20 right-15 flex gap-2 top-[40%] left-[28%]">
         {[1, 2, 3, 4, 5, 6].map((num, index) => {
           const isActive = gameState?.active_players?.[index];
           if (!isActive) return null;

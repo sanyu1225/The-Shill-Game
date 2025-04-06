@@ -7,26 +7,25 @@ import GameStage from "./GameStage";
 import { useState, useEffect } from "react";
 
 const Stage = () => {
-  const { startGame, nextRound, messages } = useWebSocket();
+  const { startGame, nextRound, messages, gameState } = useWebSocket();
   const [isRoundCompleted, setIsRoundCompleted] = useState(false);
   const [canStartGame, setCanStartGame] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
 
   useEffect(() => {
     if (messages.length > 0) {
-      messages.forEach((message) => {
-        console.log("Processing message:", message);
-        if (message.type === "system") {
-          if (message.event === "round_completed_ended") {
-            setIsRoundCompleted(true);
-          }
-          // 当收到 Joined game 消息时，允许开始游戏
-          if (message.content === "Joined game.") {
-            setCanStartGame(true);
-            setGameStarted(false);
-          }
+      const lastMessage = messages[messages.length - 1];
+      console.log("Processing last message:", lastMessage);
+      if (lastMessage.type === "system") {
+        if (lastMessage.event === "round_completed_ended") {
+          setIsRoundCompleted(true);
         }
-      });
+        // 当收到 Joined game 消息时，允许开始游戏
+        if (messages[0].content === "Joined game.") {
+          setCanStartGame(true);
+          setGameStarted(false);
+        }
+      }
     }
   }, [messages]);
 
@@ -36,7 +35,7 @@ const Stage = () => {
     setGameStarted(true);
     setCanStartGame(false);
   };
-
+  // message :  "Game not initialized yet. Connect via WebSocket to initialize."
   return (
     <>
       <div className="min-h-screen bg-[#1a1a2e] pt-16 p-8">
@@ -45,7 +44,6 @@ const Stage = () => {
             <GameStage />
 
             <div className="flex justify-center gap-4">
-              
                 <Button
                   onClick={handleStartGame}
                   className={`!min-w-[120px] !h-[45px] transition-all duration-300
@@ -59,6 +57,8 @@ const Stage = () => {
                 >
                   Start Game
                 </Button>
+            
+
               <Button
                 onClick={() => {
                   console.log("🔄 Clicking Next Round button");
