@@ -21,8 +21,7 @@ console.log("gameState",gameState)
         if (lastMessage.event === "round_completed_ended") {
           setIsRoundCompleted(true);
         }
-        // 当收到 Joined game 消息时，允许开始游戏
-        if (messages[0].content === "Joined game.") {
+        if (messages[0].content === "Joined game." || lastMessage.content === "Joined game.") {
           setCanStartGame(true);
           setGameStarted(false);
         }
