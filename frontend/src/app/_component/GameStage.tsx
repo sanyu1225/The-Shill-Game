@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useWebSocket } from "@/context/WebSocketContext";
-import { Popup, Card, Button } from 'pixel-retroui';
+import { Popup, Button } from 'pixel-retroui';
 import { useWriteContract, useReadContract, useAccount } from "wagmi";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "@/config/abi/NFT";
 
@@ -57,8 +57,8 @@ const GameStage = () => {
   const [thinkingPlayerId, setThinkingPlayerId] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [isWinnerPopupOpen, setIsWinnerPopupOpen] = useState(false);
   const { messages, gameState, getWinner } = useWebSocket();
-  const [showWinner, setShowWinner] = useState(false);
   const [winners, setWinners] = useState<WinnerInfo[]>([]);
   const winnerIsMe = winners.some(w => w.name === "Vitalik");
   const { writeContractAsync } = useWriteContract();
@@ -73,7 +73,6 @@ const GameStage = () => {
       enabled: !!address
     }
   });
-console.log("tokenId~~~~~~",tokenId)
   const handleRecordHistory = async () => {
     if (tokenId === undefined || !winnerIsMe || winners.length === 0) return;
     
@@ -100,15 +99,12 @@ console.log("tokenId~~~~~~",tokenId)
     
     if (!winner) return;
 
-    // Handle both response formats
     if ('winners' in winner && winner.winners) {
-      // Handle array of winners
       setWinners(winner.winners);
     } else if ('winner' in winner && winner.winner) {
-      // Handle single winner
       setWinners([winner.winner]);
     }
-    setShowWinner(true);
+    setIsWinnerPopupOpen(true);
   }
   useEffect(() => {
     if (messages.length > 0) {
@@ -142,32 +138,35 @@ console.log("tokenId~~~~~~",tokenId)
         style={{ backgroundImage: "url('/bg.png')" }}
       />
 
-      {/* Winner Card */}
-      {showWinner && (
-        <div className="z-80 absolute top-12 left-0 right-0 flex items-center justify-center">
-          <Card className={`w-[${winnerIsMe ? '80%' : '60%'}] py-4 text-center`}>
-            <h2 className="text-2xl font-pixel mb-2">
-              {winnerIsMe ? "🎉 Congratulations! You Won! 🎉" : "🎮 Game Over 🎮"}
-            </h2>
-            {winners.map((winner, index) => (
-              <div key={index} className="mb-2">
-                <p className="text-xl font-pixel">Winner: {winner.name}</p>
-                {winnerIsMe && (
-                  <>
-                    <p className="text-sm font-pixel">Takeaway: {winner.takeaway}</p>
-                    <Button 
-                      onClick={handleRecordHistory}
-                      className="mt-2"
-                    >
-                      Add Memory
-                    </Button>
-                  </>
-                )}
-              </div>
-            ))}
-          </Card>
+      {/* Winner Popup */}
+      <Popup
+        isOpen={isWinnerPopupOpen}
+        onClose={() => setIsWinnerPopupOpen(false)}
+      >
+        <div className="p-4 text-center w-full">
+          <h2 className="text-2xl font-pixel mb-2">
+            {winnerIsMe ? "🎉 Congratulations! You Won! 🎉" : "🎮 Game Over 🎮"}
+          </h2>
+          {winners.map((winner, index) => (
+            <div key={index} className="mb-2">
+              <p className="text-xl font-pixel">Winner: {winner.name}</p>
+              {winnerIsMe && (
+                <>
+                  <div className="max-w-[400px] mx-auto overflow-auto max-h-[100px] text-left border border-gray-200 rounded p-2 mb-2">
+                    <p className="text-sm font-pixel whitespace-pre-wrap">Takeaway: {winner.takeaway}</p>
+                  </div>
+                  <Button 
+                    onClick={handleRecordHistory}
+                    className="mt-2"
+                  >
+                    Add Memory
+                  </Button>
+                </>
+              )}
+            </div>
+          ))}
         </div>
-      )}
+      </Popup>
 
       {/* 角色群组容器 */}
       <div className="absolute bottom-20 right-15 flex gap-2 top-[40%] left-[28%]">
