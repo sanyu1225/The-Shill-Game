@@ -3,7 +3,9 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useWebSocket } from "@/context/WebSocketContext";
-import { Popup, Card } from 'pixel-retroui';
+import { Popup, Card, Button } from 'pixel-retroui';
+import { useWriteContract, useReadContract, useAccount } from "wagmi";
+import { CONTRACT_ADDRESS, CONTRACT_ABI } from "@/config/abi/NFT";
 
 interface GameState {
   status: string;
@@ -58,7 +60,40 @@ const GameStage = () => {
   const { messages, gameState, getWinner } = useWebSocket();
   const [showWinner, setShowWinner] = useState(false);
   const [winners, setWinners] = useState<WinnerInfo[]>([]);
-  // const isMe = 
+  const winnerIsMe = winners.some(w => w.name === "Vitalik");
+  const { writeContractAsync } = useWriteContract();
+  const { address } = useAccount();
+  
+  const { data: tokenId } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'tokenOfOwnerByIndex',
+    args: address ? [address, BigInt(0)] : undefined,
+    query: {
+      enabled: !!address
+    }
+  });
+console.log("tokenId~~~~~~",tokenId)
+  const handleRecordHistory = async () => {
+    if (tokenId === undefined || !winnerIsMe || winners.length === 0) return;
+    
+    try {
+      const winner = winners.find(w => w.name === "Vitalik");
+      if (!winner) return;
+
+      const hash = await writeContractAsync({
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: 'addGameHistory',
+        args: [tokenId, winner.takeaway],
+      });
+      
+      console.log('Record history transaction hash:', hash);
+    } catch (error) {
+      console.error("Failed to record history:", error);
+    }
+  };
+
   const getWinnerHandler = async () => {
     const winner = await getWinner() as WinnerResponse | null;
     console.log("winner", winner);
@@ -109,15 +144,25 @@ const GameStage = () => {
 
       {/* Winner Card */}
       {showWinner && (
-        <div className="absolute top-12 left-0 right-0 flex items-center justify-center">
-          <Card className="w-[60%] py-4 text-center">
+        <div className="z-80 absolute top-12 left-0 right-0 flex items-center justify-center">
+          <Card className={`w-[${winnerIsMe ? '80%' : '60%'}] py-4 text-center`}>
             <h2 className="text-2xl font-pixel mb-2">
-              {winners.some(w => w.name === "Vitalik") ? "🎉 Congratulations! You Won! 🎉" : "🎮 Game Over 🎮"}
+              {winnerIsMe ? "🎉 Congratulations! You Won! 🎉" : "🎮 Game Over 🎮"}
             </h2>
             {winners.map((winner, index) => (
               <div key={index} className="mb-2">
                 <p className="text-xl font-pixel">Winner: {winner.name}</p>
-                <p className="text-sm font-pixel">Takeaway: {winner.takeaway}</p>
+                {winnerIsMe && (
+                  <>
+                    <p className="text-sm font-pixel">Takeaway: {winner.takeaway}</p>
+                    <Button 
+                      onClick={handleRecordHistory}
+                      className="mt-2"
+                    >
+                      Add Memory
+                    </Button>
+                  </>
+                )}
               </div>
             ))}
           </Card>

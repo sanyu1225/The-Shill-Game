@@ -16,8 +16,8 @@ export default function Home() {
   const { openConnectModal } = useConnectModal();
   const { writeContractAsync } = useWriteContract();
   const [hasNFT, setHasNFT] = useState(false);
-  const { setup, messages } = useWebSocket();
-  const [gameState] = useState<string|null>(null);
+  const { setup, messages, gameState } = useWebSocket();
+  // const [gameState] = useState<string|null>(null);
   // useEffect(() => {
   //   const fetchGameState = async () => {
   //     const gameState = await getGameState();
@@ -57,6 +57,7 @@ export default function Home() {
       enabled: tokenId !== undefined
     }
   });
+
   useEffect(() => {
     if (tokenURI && typeof tokenURI === 'string') {
       const base64Data = tokenURI.replace("data:application/json;base64,", "");
@@ -71,9 +72,7 @@ export default function Home() {
         }, {});
 
         if (Object.keys(processedTraits).length > 0) {
-          console.log("messages",messages[0])
-          const gameState = messages[0].content
-          if(gameState === "not_initialized"){
+          if(gameState?.status === "not_initialized"){
             setup(processedTraits);
           }
         }
