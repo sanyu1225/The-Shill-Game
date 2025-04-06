@@ -16,8 +16,8 @@ export default function Home() {
   const { openConnectModal } = useConnectModal();
   const { writeContractAsync } = useWriteContract();
   const [hasNFT, setHasNFT] = useState(false);
-  const { setup, messages, getGameState } = useWebSocket();
-  const [gameState, setGameState] = useState<string|null>(null);
+  const { setup, messages } = useWebSocket();
+  const [gameState] = useState<string|null>(null);
   // useEffect(() => {
   //   const fetchGameState = async () => {
   //     const gameState = await getGameState();

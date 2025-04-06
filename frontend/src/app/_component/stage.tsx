@@ -7,7 +7,7 @@ import GameStage from "./GameStage";
 import { useState, useEffect } from "react";
 
 const Stage = () => {
-  const { startGame, nextRound, messages, gameState } = useWebSocket();
+  const { startGame, nextRound, messages } = useWebSocket();
   const [isRoundCompleted, setIsRoundCompleted] = useState(false);
   const [canStartGame, setCanStartGame] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
