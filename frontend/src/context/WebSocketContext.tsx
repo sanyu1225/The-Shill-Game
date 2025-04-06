@@ -60,8 +60,8 @@ interface WebSocketContextType {
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
-const WS_URL = 'wss://strings-disable-staffing-fi.trycloudflare.com/ws';
-const API_URL = 'https://strings-disable-staffing-fi.trycloudflare.com';
+const WS_URL = 'wss://emperor-be-drain-critical.trycloudflare.com/ws';
+const API_URL = 'https://emperor-be-drain-critical.trycloudflare.com';
 
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
